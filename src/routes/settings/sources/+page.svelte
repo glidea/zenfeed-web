@@ -776,7 +776,7 @@
                         </button>
                         <span class="text-sm text-base-content/100 self-center"
                             >{$_("settings.sources.addByOpmlDoc")}<a
-                                href="https://follow.is/"
+                                href="https://github.com/glidea/zenfeed/blob/main/docs/migrate-from-follow.md"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 class="link link-secondary">Follow</a
