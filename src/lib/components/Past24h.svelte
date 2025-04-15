@@ -79,9 +79,24 @@
         ? (marked.parse(searchResults.summary) as string)
         : "";
 
-    // Helper function to create a unique ID for a feed item
+    function simpleHash(str: string): number {
+        let hash = 5381;
+        for (let i = 0; i < str.length; i++) {
+            const char = str.charCodeAt(i);
+            hash = (hash << 5) + hash + char;
+        }
+        return hash >>> 0;
+    }
+
+    // Helper function to create a unique ID for a feed item based on labels hash
     function getFeedItemId(feed: FeedVO): string {
-        return `${feed.labels.link}::${feed.time}`;
+        const labels = feed.labels;
+        const sortedKeys = Object.keys(labels).sort();
+        const combinedString = sortedKeys
+            .map((key) => `${key}=${labels[key]}`)
+            .join("&");
+        const hashValue = simpleHash(combinedString);
+        return hashValue.toString();
     }
 
     // Comparison function for sorting feeds
