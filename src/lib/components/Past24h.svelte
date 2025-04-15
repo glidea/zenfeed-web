@@ -4,6 +4,8 @@
     import { fly, fade, scale } from "svelte/transition"; // Import fade transition and scale
     import { cubicOut } from "svelte/easing"; // Import an easing function
     import { _ } from "svelte-i18n"; // Import the translation function
+    import { apiUrl } from "$lib/stores/apiUrl";
+    import { get } from "svelte/store";
 
     // Define TypeScript interfaces based on the backend API response
     interface FeedLabel {
@@ -154,7 +156,8 @@
             const now = new Date();
             const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-            const response = await fetch("/api/query", {
+            const baseUrl = get(apiUrl);
+            const response = await fetch(`${baseUrl}/query`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

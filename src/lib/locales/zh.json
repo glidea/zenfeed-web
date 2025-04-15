@@ -144,5 +144,13 @@
         "saveButton": "保存",
         "savingButton": "保存中...",
         "saveSuccess": "保存成功!"
+    },
+    "settingsModal": {
+        "title": "设置",
+        "language": "语言",
+        "backendUrl": "后端 API 地址",
+        "backendUrlHint": "请输入后端服务器的完整 URL。",
+        "save": "保存",
+        "cancel": "取消"
     }
 }

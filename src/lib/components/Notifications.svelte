@@ -1,4 +1,7 @@
 <script context="module" lang="ts">
+    import { apiUrl } from "$lib/stores/apiUrl";
+    import { get } from "svelte/store";
+
     interface EmailChannel {
         smtp_endpoint?: string;
         from?: string;
@@ -68,7 +71,8 @@
         error = null;
         saveStatus = "idle";
         try {
-            const response = await fetch("/api/query_config");
+            const baseUrl = get(apiUrl);
+            const response = await fetch(`${baseUrl}/query_config`);
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -234,7 +238,8 @@
             const updatedConfigJSON = JSON.stringify(configToSend, null, 2); // Pretty print for potential debugging
 
             // 4. Send the merged config to API
-            const response = await fetch("/api/apply_config", {
+            const baseUrl = get(apiUrl);
+            const response = await fetch(`${baseUrl}/apply_config`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

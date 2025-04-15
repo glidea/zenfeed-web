@@ -1,6 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n"; // Import i18n function
+    import { apiUrl } from "$lib/stores/apiUrl";
+    import { get } from "svelte/store";
 
     // --- Type Definitions ---
     interface AppConfig {
@@ -89,9 +91,9 @@
         isLoading = true;
         error = null;
         try {
-            console.log("Fetching sources config...");
+            const baseUrl = get(apiUrl);
             currentConfig = await apiCall<AppConfig>(
-                "/api/query_config",
+                `${baseUrl}/query_config`,
                 "POST",
                 {},
             );
@@ -134,7 +136,8 @@
                 });
             }
 
-            await apiCall("/api/apply_config", "POST", configToSend);
+            const baseUrl = get(apiUrl);
+            await apiCall(`${baseUrl}/apply_config`, "POST", configToSend);
             console.log("Config changes applied successfully.");
             if (successMessage) {
                 // Maybe show a toast notification here in the future

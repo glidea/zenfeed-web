@@ -145,5 +145,13 @@
         "saveButton": "Save",
         "savingButton": "Saving...",
         "saveSuccess": "Saved successfully!"
+    },
+    "settingsModal": {
+        "title": "Settings",
+        "language": "Language",
+        "backendUrl": "Backend API Address",
+        "backendUrlHint": "Enter the full URL of your backend server.",
+        "save": "Save",
+        "cancel": "Cancel"
     }
 }

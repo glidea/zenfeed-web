@@ -2,6 +2,8 @@
     import { onMount } from "svelte";
     import * as yaml from "js-yaml";
     import { _ } from "svelte-i18n"; // Import the translation function
+    import { apiUrl } from "$lib/stores/apiUrl";
+    import { get } from "svelte/store";
 
     // Component State
     let yamlConfig = $state("");
@@ -19,7 +21,10 @@
         saveError = null; // Reset errors on load
         saveSuccessMessage = null;
         try {
-            const res = await fetch("/api/query_config", { method: "POST" });
+            const baseUrl = get(apiUrl);
+            const res = await fetch(`${baseUrl}/query_config`, {
+                method: "POST",
+            });
             if (!res.ok) {
                 // Use translated string with interpolation
                 throw new Error(
@@ -59,7 +64,8 @@
             }
 
             // API Call
-            const res = await fetch("/api/apply_config", {
+            const baseUrl = get(apiUrl);
+            const res = await fetch(`${baseUrl}/apply_config`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
