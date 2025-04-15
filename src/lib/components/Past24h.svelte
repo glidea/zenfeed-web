@@ -804,7 +804,7 @@
         {/if}
 
         <!-- Centered Search Input and Button -->
-        <div class="mx-auto flex-1 items-center gap-3">
+        <div class="mx-auto flex flex-1 items-center gap-3">
             <input
                 type="search"
                 placeholder={$_("past24h.searchPlaceholder")}
@@ -836,37 +836,37 @@
                     >{$_("past24h.searchButton")}</span
                 >
             </button>
+            <!-- Back Button -->
+            {#if !isLoading && ((searchResults && searchResults.summary) || Object.keys(groupedFeeds).length === 0)}
+                <button
+                    class="btn btn-ghost rounded-lg"
+                    on:click={() => {
+                        searchTerm = "";
+                        handleSearch(); // Fetch feeds without search term (effectively 'go back')
+                    }}
+                    title={$_("past24h.backButtonTitle")}
+                >
+                    <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke-width="1.5"
+                        stroke="currentColor"
+                        class="h-5 w-5"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                        />
+                    </svg>
+                    <span class="ml-1.5 hidden sm:inline"
+                        >{$_("past24h.backButton")}</span
+                    >
+                </button>
+            {/if}
         </div>
         <!-- End of centered search wrapper -->
-
-        {#if !isLoading && ((searchResults && searchResults.summary) || Object.keys(groupedFeeds).length === 0)}
-            <button
-                class="btn btn-ghost rounded-lg"
-                on:click={() => {
-                    searchTerm = "";
-                    handleSearch(); // Fetch feeds without search term (effectively 'go back')
-                }}
-                title={$_("past24h.backButtonTitle")}
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    class="h-5 w-5"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
-                    />
-                </svg>
-                <span class="ml-1.5 hidden sm:inline"
-                    >{$_("past24h.backButton")}</span
-                >
-            </button>
-        {/if}
     </div>
 
     <!-- Search Summary Section -->
