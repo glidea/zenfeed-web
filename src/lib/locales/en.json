@@ -68,7 +68,8 @@
     },
     "nav": {
         "home": "Home",
-        "settings": "Settings"
+        "settings": "Settings",
+        "githubStarTooltip": "Star the project to support us!"
     },
     "advancedConfig": {
         "loading": "Loading configuration...",

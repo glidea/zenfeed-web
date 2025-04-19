@@ -68,7 +68,8 @@
     },
     "nav": {
         "home": "主页",
-        "settings": "设置"
+        "settings": "设置",
+        "githubStarTooltip": "Star 项目，支持我们走下去"
     },
     "advancedConfig": {
         "loading": "正在加载配置...",
@@ -139,7 +140,7 @@
         "queryPlaceholder": "输入你关心的具体问题或主题，描述越详细，结果越准确",
         "removeEventButtonLabel": "移除事件",
         "noTrackedEvents": "暂无关注事件。",
-        "addEventHint": "点击“+”添加。",
+        "addEventHint": "点击\"+\"添加。",
         "addEventButton": "+ 添加事件",
         "saveButton": "保存",
         "savingButton": "保存中...",

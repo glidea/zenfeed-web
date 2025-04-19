@@ -123,6 +123,9 @@
             configToSend.notify.channels.email.password =
                 emailPassword || undefined;
 
+            // Ensure receivers array exists before trying to find index
+            configToSend.notify.receivers = configToSend.notify.receivers ?? [];
+
             const managedReceiverIndex =
                 configToSend.notify.receivers.findIndex(
                     (receiver: NotifyReceiver) =>
