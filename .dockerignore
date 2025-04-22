@@ -1,0 +1,9 @@
+.git
+.gitignore
+node_modules
+.svelte-kit
+build
+dist
+.env
+.env.*
+*.local
