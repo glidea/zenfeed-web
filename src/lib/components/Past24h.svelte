@@ -1,13 +1,11 @@
 <script lang="ts">
     import { onMount, tick, onDestroy } from "svelte";
     import { marked } from "marked";
-    import { fly, fade, scale } from "svelte/transition"; // Import fade transition and scale
+    import { fly } from "svelte/transition"; // Import fade transition and scale
     import { cubicOut } from "svelte/easing"; // Import an easing function
     import { _ } from "svelte-i18n"; // Import the translation function
-    import { apiUrl } from "$lib/stores/apiUrl";
-    import { get } from "svelte/store";
+    import { getTargetApiUrl } from "$lib/utils/apiUtils";
 
-    // Define TypeScript interfaces based on the backend API response
     interface FeedLabel {
         [key: string]: string;
     }
@@ -171,8 +169,7 @@
             const now = new Date();
             const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
 
-            const baseUrl = get(apiUrl);
-            const response = await fetch(`${baseUrl}/query`, {
+            const response = await fetch(getTargetApiUrl("/query"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",

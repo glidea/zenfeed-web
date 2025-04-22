@@ -1,9 +1,8 @@
 <script lang="ts">
     import { onMount } from "svelte";
     import * as yaml from "js-yaml";
-    import { _ } from "svelte-i18n"; // Import the translation function
-    import { apiUrl } from "$lib/stores/apiUrl";
-    import { get } from "svelte/store";
+    import { _ } from "svelte-i18n";
+    import { getTargetApiUrl } from "$lib/utils/apiUtils";
 
     // Component State
     let yamlConfig = $state("");
@@ -20,23 +19,28 @@
         error = null;
         saveError = null; // Reset errors on load
         saveSuccessMessage = null;
+
         try {
-            const baseUrl = get(apiUrl);
-            const res = await fetch(`${baseUrl}/query_config`, {
+            const res = await fetch(getTargetApiUrl("/query_config"), {
                 method: "POST",
+                headers: {
+                    Accept: "application/json",
+                },
             });
+
             if (!res.ok) {
-                // Use translated string with interpolation
+                const errorText = await res.text();
                 throw new Error(
                     $_("advancedConfig.errorLoading", {
-                        values: { error: `${res.status} ${res.statusText}` },
+                        values: {
+                            error: `${res.status} ${res.statusText}. ${errorText || "(No further details provided)"}`,
+                        },
                     }),
                 );
             }
             const configJson = await res.json();
             yamlConfig = yaml.dump(configJson);
         } catch (e: any) {
-            // Use the error message directly if it's already translated, or provide a fallback
             error =
                 e.message ||
                 $_("advancedConfig.errorLoading", {
@@ -51,10 +55,10 @@
     async function saveConfig() {
         isSaving = true;
         saveError = null;
-        saveSuccessMessage = null; // Reset messages on new save attempt
+        saveSuccessMessage = null;
         error = null;
+
         try {
-            // Basic validation
             if (yamlConfig.trim() === "") {
                 throw new Error($_("advancedConfig.emptyConfigError"));
             }
@@ -63,9 +67,7 @@
                 throw new Error($_("advancedConfig.invalidYamlError"));
             }
 
-            // API Call
-            const baseUrl = get(apiUrl);
-            const res = await fetch(`${baseUrl}/apply_config`, {
+            const res = await fetch(getTargetApiUrl("/apply_config"), {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -73,10 +75,8 @@
                 body: JSON.stringify(configJson),
             });
 
-            // Handle Response
             if (!res.ok) {
                 const errorText = await res.text();
-                // Use translated string with interpolation
                 throw new Error(
                     $_("advancedConfig.errorSaving", {
                         values: {
@@ -86,13 +86,11 @@
                 );
             }
 
-            // Success Feedback
             saveSuccessMessage = $_("advancedConfig.saveSuccess");
             setTimeout(() => {
                 saveSuccessMessage = null;
-            }, 3000); // Clear message after 3 seconds
+            }, 3000);
         } catch (e: any) {
-            // Use the error message directly or provide a fallback
             saveError =
                 e.message ||
                 $_("advancedConfig.errorSaving", {
