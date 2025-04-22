@@ -15,8 +15,6 @@ go.work
 .cursorrules
 *.log
 local_docs/
-.env
-.env.local
 __debug_bin
 config.yaml
 data/
@@ -32,9 +30,5 @@ node_modules
 */.svelte-kit
 /build
 Thumbs.db
-.env
-.env.*
-!.env.example
-!.env.test
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
