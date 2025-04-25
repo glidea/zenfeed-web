@@ -1,5 +1,9 @@
 import { error as skError } from '@sveltejs/kit';
 import type { RequestHandler } from './$types';
+import { env } from '$env/dynamic/public';
+
+const disableApiProxyQueryConfig = env.PUBLIC_DISABLE_API_PROXY_QUERY_CONFIG === "true";
+const disableApiProxyApplyConfig = env.PUBLIC_DISABLE_API_PROXY_APPLY_CONFIG === "true";
 
 // This handler will attempt to proxy requests for any method (GET, POST, etc.)
 const handler: RequestHandler = async (event) => {
@@ -20,6 +24,15 @@ const handler: RequestHandler = async (event) => {
 
     // `params.path` will contain the matched path segments after /api/
     const endpointPath = params.path;
+
+    if (disableApiProxyQueryConfig && endpointPath.startsWith('query_config')) {
+        throw skError(404, 'Not Found: Query config endpoint is disabled.');
+    }
+
+    if (disableApiProxyApplyConfig && endpointPath.startsWith('apply_config')) {
+        throw skError(404, 'Not Found: Apply config endpoint is disabled.');
+    }
+
     const targetUrl = `${backendUrl}/${endpointPath}`;
 
     console.log(`Proxying ${request.method} request for /api/${endpointPath} to: ${targetUrl}`); // Optional: server-side logging

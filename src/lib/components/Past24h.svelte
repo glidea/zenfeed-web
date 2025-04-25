@@ -5,6 +5,10 @@
     import { cubicOut } from "svelte/easing"; // Import an easing function
     import { _ } from "svelte-i18n"; // Import the translation function
     import { getTargetApiUrl } from "$lib/utils/apiUtils";
+    import { env } from "$env/dynamic/public";
+
+    const disableAddSource = env.PUBLIC_DISABLE_ADD_SOURCE === "true";
+    const disableSearchTerm = env.PUBLIC_DISABLE_SEARCH_TERM === "true";
 
     interface FeedLabel {
         [key: string]: string;
@@ -722,28 +726,30 @@
     class="from-base-100 via-base-200/50 to-base-100 min-h-screen space-y-6 bg-gradient-to-br p-4 md:p-8 relative"
 >
     <!-- Add Source Button -->
-    <div class="absolute top-4 right-4 md:top-8 md:right-8 z-10">
-        <a
-            href="/settings/sources"
-            class="btn btn-outline btn-primary btn-sm rounded-lg"
-        >
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.5"
-                stroke="currentColor"
-                class="h-4 w-4 mr-1.5"
+    {#if !disableAddSource}
+        <div class="absolute top-4 right-4 md:top-8 md:right-8 z-10">
+            <a
+                href="/settings/sources"
+                class="btn btn-outline btn-primary btn-sm rounded-lg"
             >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    d="M12 4.5v15m7.5-7.5h-15"
-                />
-            </svg>
-            {$_("past24h.addSourceButton")}
-        </a>
-    </div>
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke-width="1.5"
+                    stroke="currentColor"
+                    class="h-4 w-4 mr-1.5"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        d="M12 4.5v15m7.5-7.5h-15"
+                    />
+                </svg>
+                {$_("past24h.addSourceButton")}
+            </a>
+        </div>
+    {/if}
 
     <!-- Search Section -->
     <div class="flex flex-wrap items-center gap-3">
@@ -801,47 +807,20 @@
         {/if}
 
         <!-- Centered Search Input and Button -->
-        <div class="mx-auto flex flex-1 items-center gap-3">
-            <input
-                type="search"
-                placeholder={$_("past24h.searchPlaceholder")}
-                class="input input-bordered input-primary focus:ring-primary focus:border-primary w-full max-w-lg rounded-lg bg-white/90 px-4 py-2.5 text-base focus:ring-2 focus:outline-none"
-                bind:value={searchTerm}
-                on:keydown={handleKeydown}
-                disabled={isLoading}
-            />
-            <button
-                class="btn btn-primary rounded-lg"
-                on:click={handleSearch}
-                disabled={isLoading}
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    class="h-5 w-5"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
-                    />
-                </svg>
-                <span class="ml-1.5 hidden sm:inline"
-                    >{$_("past24h.searchButton")}</span
-                >
-            </button>
-            <!-- Back Button -->
-            {#if !isLoading && ((searchResults && searchResults.summary) || Object.keys(groupedFeeds).length === 0)}
+        {#if !disableSearchTerm}
+            <div class="mx-auto flex flex-1 items-center gap-3">
+                <input
+                    type="search"
+                    placeholder={$_("past24h.searchPlaceholder")}
+                    class="input input-bordered input-primary focus:ring-primary focus:border-primary w-full max-w-lg rounded-lg bg-white/90 px-4 py-2.5 text-base focus:ring-2 focus:outline-none"
+                    bind:value={searchTerm}
+                    on:keydown={handleKeydown}
+                    disabled={isLoading}
+                />
                 <button
-                    class="btn btn-ghost rounded-lg"
-                    on:click={() => {
-                        searchTerm = "";
-                        handleSearch(); // Fetch feeds without search term (effectively 'go back')
-                    }}
-                    title={$_("past24h.backButtonTitle")}
+                    class="btn btn-primary rounded-lg"
+                    on:click={handleSearch}
+                    disabled={isLoading}
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -854,15 +833,44 @@
                         <path
                             stroke-linecap="round"
                             stroke-linejoin="round"
-                            d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                            d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z"
                         />
                     </svg>
                     <span class="ml-1.5 hidden sm:inline"
-                        >{$_("past24h.backButton")}</span
+                        >{$_("past24h.searchButton")}</span
                     >
                 </button>
-            {/if}
-        </div>
+                <!-- Back Button -->
+                {#if !isLoading && ((searchResults && searchResults.summary) || Object.keys(groupedFeeds).length === 0)}
+                    <button
+                        class="btn btn-ghost rounded-lg"
+                        on:click={() => {
+                            searchTerm = "";
+                            handleSearch(); // Fetch feeds without search term (effectively 'go back')
+                        }}
+                        title={$_("past24h.backButtonTitle")}
+                    >
+                        <svg
+                            xmlns="http://www.w3.org/2000/svg"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke-width="1.5"
+                            stroke="currentColor"
+                            class="h-5 w-5"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3"
+                            />
+                        </svg>
+                        <span class="ml-1.5 hidden sm:inline"
+                            >{$_("past24h.backButton")}</span
+                        >
+                    </button>
+                {/if}
+            </div>
+        {/if}
         <!-- End of centered search wrapper -->
     </div>
 

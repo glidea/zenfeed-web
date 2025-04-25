@@ -4,45 +4,79 @@
     import AdvancedConfig from "$lib/components/AdvancedConfig.svelte";
     import SettingsModal from "$lib/components/SettingsModal.svelte";
     import { _ } from "svelte-i18n"; // Import the translation function
+    import { env } from "$env/dynamic/public"; // Import env
 
-    let activeTab = $state<"past" | "notifications" | "advanced">("past");
+    const disableNotifications = env.PUBLIC_DISABLE_NOTIFICATIONS === "true";
+    const disableAdvancedConfig = env.PUBLIC_DISABLE_ADVANCED_CONFIG === "true";
+
+    // Define available tabs based on env vars
+    type AvailableTab = "past" | "notifications" | "advanced";
+    let availableTabs: AvailableTab[] = ["past"];
+    if (!disableNotifications) {
+        availableTabs.push("notifications");
+    }
+    if (!disableAdvancedConfig) {
+        availableTabs.push("advanced");
+    }
+
+    // Set initial active tab to the first available one
+    let activeTab = $state<AvailableTab>(availableTabs[0] || "past"); // Default to 'past' if array is somehow empty
     let showSettingsModal = $state(false);
 
-    function setActiveTab(tab: "past" | "notifications" | "advanced") {
-        activeTab = tab;
+    function setActiveTab(tab: AvailableTab) {
+        // Prevent setting to a disabled tab
+        if (disableNotifications && tab === "notifications") {
+            return;
+        }
+        if (disableAdvancedConfig && tab === "advanced") {
+            return;
+        }
+        // Check if the tab is generally available (covers edge cases)
+        if (availableTabs.includes(tab)) {
+            activeTab = tab;
+        }
     }
 </script>
 
 <div class="container mx-auto p-4">
     <div role="tablist" class="tabs tabs-bordered mb-6 pl-8">
-        <a
-            role="tab"
-            class="tab pl-4 {activeTab === 'past' ? 'tab-active' : ''}"
-            onclick={() => setActiveTab("past")}
-            onkeypress={(e) => e.key === "Enter" && setActiveTab("past")}
-            tabindex={activeTab === "past" ? 0 : -1}
-        >
-            {$_("tabs.past24h")}
-        </a>
-        <a
-            role="tab"
-            class="tab pl-4 {activeTab === 'notifications' ? 'tab-active' : ''}"
-            onclick={() => setActiveTab("notifications")}
-            onkeypress={(e) =>
-                e.key === "Enter" && setActiveTab("notifications")}
-            tabindex={activeTab === "notifications" ? 0 : -1}
-        >
-            {$_("tabs.notifications")}
-        </a>
-        <a
-            role="tab"
-            class="tab pl-4 {activeTab === 'advanced' ? 'tab-active' : ''}"
-            onclick={() => setActiveTab("advanced")}
-            onkeypress={(e) => e.key === "Enter" && setActiveTab("advanced")}
-            tabindex={activeTab === "advanced" ? 0 : -1}
-        >
-            {$_("tabs.advancedConfig")}
-        </a>
+        {#if availableTabs.includes("past")}
+            <a
+                role="tab"
+                class="tab pl-4 {activeTab === 'past' ? 'tab-active' : ''}"
+                onclick={() => setActiveTab("past")}
+                onkeypress={(e) => e.key === "Enter" && setActiveTab("past")}
+                tabindex={activeTab === "past" ? 0 : -1}
+            >
+                {$_("tabs.past24h")}
+            </a>
+        {/if}
+        {#if !disableNotifications && availableTabs.includes("notifications")}
+            <a
+                role="tab"
+                class="tab pl-4 {activeTab === 'notifications'
+                    ? 'tab-active'
+                    : ''}"
+                onclick={() => setActiveTab("notifications")}
+                onkeypress={(e) =>
+                    e.key === "Enter" && setActiveTab("notifications")}
+                tabindex={activeTab === "notifications" ? 0 : -1}
+            >
+                {$_("tabs.notifications")}
+            </a>
+        {/if}
+        {#if !disableAdvancedConfig && availableTabs.includes("advanced")}
+            <a
+                role="tab"
+                class="tab pl-4 {activeTab === 'advanced' ? 'tab-active' : ''}"
+                onclick={() => setActiveTab("advanced")}
+                onkeypress={(e) =>
+                    e.key === "Enter" && setActiveTab("advanced")}
+                tabindex={activeTab === "advanced" ? 0 : -1}
+            >
+                {$_("tabs.advancedConfig")}
+            </a>
+        {/if}
         <div class="tab flex-grow justify-end">
             <a
                 href="https://github.com/glidea/zenfeed"
@@ -92,9 +126,9 @@
     <div>
         {#if activeTab === "past"}
             <Past24h />
-        {:else if activeTab === "notifications"}
+        {:else if activeTab === "notifications" && !disableNotifications}
             <Notifications />
-        {:else if activeTab === "advanced"}
+        {:else if activeTab === "advanced" && !disableAdvancedConfig}
             <AdvancedConfig />
         {/if}
     </div>
