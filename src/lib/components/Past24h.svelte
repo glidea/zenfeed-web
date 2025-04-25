@@ -36,7 +36,10 @@
     const GROUP_BY_LABEL_STORAGE_KEY = "zenfeed_group_by_label";
 
     // Default label to group by
-    const DEFAULT_GROUP_BY_LABEL = "source";
+    const DEFAULT_GROUP_BY_LABEL =
+        env.PUBLIC_DEFAULT_GROUP_BY_LABEL || "source";
+
+    const FEED_TITLE_PREFIX_LABEL = env.PUBLIC_FEED_TITLE_PREFIX_LABEL;
 
     // Type for storing read item data
     type ReadItemsMap = Map<string, number>; // Map<itemId, timestamp>
@@ -980,6 +983,13 @@
                                             }}
                                             on:mouseleave={() => hideTooltip()}
                                         >
+                                            {#if FEED_TITLE_PREFIX_LABEL && FEED_TITLE_PREFIX_LABEL !== selectedGroupByLabel && feed.labels[FEED_TITLE_PREFIX_LABEL]}
+                                                <span class="mr-1 opacity-60"
+                                                    >[{feed.labels[
+                                                        FEED_TITLE_PREFIX_LABEL
+                                                    ]}]</span
+                                                >
+                                            {/if}
                                             {feed.labels.title ||
                                                 $_("past24h.untitledFeed")}
                                         </a>
