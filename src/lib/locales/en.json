@@ -154,5 +154,8 @@
         "backendUrlHint": "Enter the full URL of your backend server.",
         "save": "Save",
         "cancel": "Cancel"
+    },
+    "announcement": {
+        "known": "I know"
     }
 }

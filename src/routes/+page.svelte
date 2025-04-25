@@ -1,4 +1,6 @@
 <script lang="ts">
+    import { onMount } from "svelte";
+    import { browser } from "$app/environment";
     import Past24h from "$lib/components/Past24h.svelte";
     import Notifications from "$lib/components/Notifications.svelte";
     import AdvancedConfig from "$lib/components/AdvancedConfig.svelte";
@@ -8,6 +10,8 @@
 
     const disableNotifications = env.PUBLIC_DISABLE_NOTIFICATIONS === "true";
     const disableAdvancedConfig = env.PUBLIC_DISABLE_ADVANCED_CONFIG === "true";
+    const announcementText = env.PUBLIC_ANNOUNCEMENT_TEXT || "";
+    const dismissedAnnouncementKey = "dismissedAnnouncementText";
 
     // Define available tabs based on env vars
     type AvailableTab = "past" | "notifications" | "advanced";
@@ -22,6 +26,25 @@
     // Set initial active tab to the first available one
     let activeTab = $state<AvailableTab>(availableTabs[0] || "past"); // Default to 'past' if array is somehow empty
     let showSettingsModal = $state(false);
+    let showAnnouncement = $state(false);
+
+    onMount(() => {
+        if (browser && announcementText) {
+            const dismissedText = localStorage.getItem(
+                dismissedAnnouncementKey,
+            );
+            if (announcementText !== dismissedText) {
+                showAnnouncement = true;
+            }
+        }
+    });
+
+    function dismissAnnouncement() {
+        if (browser) {
+            showAnnouncement = false;
+            localStorage.setItem(dismissedAnnouncementKey, announcementText);
+        }
+    }
 
     function setActiveTab(tab: AvailableTab) {
         // Prevent setting to a disabled tab
@@ -39,6 +62,28 @@
 </script>
 
 <div class="container mx-auto p-4">
+    {#if showAnnouncement && announcementText}
+        <div role="alert" class="alert alert-info shadow-lg mb-4">
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                class="stroke-current shrink-0 w-6 h-6"
+            >
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+                ></path>
+            </svg>
+            <span>{announcementText}</span>
+            <button class="btn btn-sm btn-ghost" onclick={dismissAnnouncement}>
+                {$_("announcement.known")}
+            </button>
+        </div>
+    {/if}
+
     <div role="tablist" class="tabs tabs-bordered mb-6 pl-8">
         {#if availableTabs.includes("past")}
             <a
@@ -78,6 +123,14 @@
             </a>
         {/if}
         <div class="tab flex-grow justify-end">
+            <a
+                href="/wechat.png"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="btn btn-ghost btn-circle mr-2 tooltip tooltip-bottom"
+            >
+                <img src="/wechat.png" alt="WeChat Group" class="w-6 h-6" />
+            </a>
             <a
                 href="https://github.com/glidea/zenfeed"
                 target="_blank"

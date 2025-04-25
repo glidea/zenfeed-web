@@ -153,5 +153,8 @@
         "backendUrlHint": "请输入后端服务器的完整 URL。",
         "save": "保存",
         "cancel": "取消"
+    },
+    "announcement": {
+        "known": "我知道了"
     }
 }
