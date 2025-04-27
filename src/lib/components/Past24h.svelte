@@ -697,32 +697,15 @@
             localStorage.removeItem(READ_ITEMS_STORAGE_KEY);
         }
 
-        // Add visibility change listener
-        document.addEventListener("visibilitychange", handleVisibilityChange);
-
         fetchFeeds(); // Fetch initial data
     });
 
     // Clean up the event listener when the component is destroyed
     onDestroy(() => {
-        document.removeEventListener(
-            "visibilitychange",
-            handleVisibilityChange,
-        );
-        // Optional: Clean up tooltip resources if needed
         if (hideTimeoutId) {
             clearTimeout(hideTimeoutId);
         }
     });
-
-    // Handle page visibility change to refresh data
-    function handleVisibilityChange() {
-        // Check if the page is visible and not currently loading
-        if (!document.hidden && !isLoading) {
-            console.log("Page became visible, refreshing feeds..."); // Optional logging
-            fetchFeeds();
-        }
-    }
 </script>
 
 <div
