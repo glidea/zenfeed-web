@@ -156,5 +156,9 @@
     },
     "announcement": {
         "known": "我知道了"
+    },
+    "feedDetail": {
+        "backButton": "返回并标记为已读",
+        "visitSourceButton": "查看全文"
     }
 }

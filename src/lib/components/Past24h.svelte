@@ -6,6 +6,8 @@
     import { _ } from "svelte-i18n"; // Import the translation function
     import { getTargetApiUrl } from "$lib/utils/apiUtils";
     import { env } from "$env/dynamic/public";
+    import { goto } from "$app/navigation"; // Import for navigation
+    import { selectedFeed } from "$lib/stores/feedStore"; // Import the store
 
     const disableAddSource = env.PUBLIC_DISABLE_ADD_SOURCE === "true";
     const disableSearchTerm = env.PUBLIC_DISABLE_SEARCH_TERM === "true";
@@ -44,6 +46,8 @@
     // Type for storing read item data
     type ReadItemsMap = Map<string, number>; // Map<itemId, timestamp>
 
+    const MARK_ON_MOBILE_KEY = "zenfeed_markFeedIdOnMobile"; // Key for sessionStorage
+
     let searchTerm = "";
     let searchResults: QueryResponse | null = null;
     let groupedFeeds: GroupedFeeds = {};
@@ -63,6 +67,9 @@
 
     // Audio element for the sound effect
     let markAsReadSound: HTMLAudioElement | null = null;
+
+    // State variable to track if it's a mobile-like device
+    let isMobile = false;
 
     // Filter out read items from the grouped feeds
     $: filteredGroupedFeeds = filterReadItems(groupedFeeds, readItems);
@@ -614,12 +621,9 @@
         };
     }
 
-    // Function to handle marking an item as read via context menu
-    function handleMarkAsRead(event: MouseEvent, feed: FeedVO) {
-        event.preventDefault();
-        const itemId = getFeedItemId(feed);
+    // --- Core function to mark an item as read ---
+    function markItemRead(itemId: string) {
         const nowTimestamp = Date.now();
-
         if (!readItems.has(itemId)) {
             // Play sound effect
             if (markAsReadSound) {
@@ -631,11 +635,10 @@
 
             // Update the reactive map to trigger UI changes
             readItems.set(itemId, nowTimestamp);
-            readItems = new Map(readItems); // Trigger reactivity by creating a new map instance
+            readItems = new Map(readItems); // Trigger reactivity
 
             // Update localStorage for persistence
             try {
-                // Convert map to array of [key, value] pairs for JSON serialization
                 const storableArray = Array.from(readItems.entries());
                 localStorage.setItem(
                     READ_ITEMS_STORAGE_KEY,
@@ -645,11 +648,85 @@
                 console.error("Failed to save read items to localStorage:", e);
             }
         }
-        hideTooltip(0);
+    }
+
+    // Function to handle feed item click on mobile
+    function handleFeedClickMobile(event: MouseEvent, feed: FeedVO) {
+        event.preventDefault(); // Prevent default link navigation
+        const itemId = getFeedItemId(feed); // Get the unique ID
+
+        const feedDetailData = {
+            title: feed.labels.title || $_("past24h.untitledFeed"),
+            summaryHtmlSnippet: feed.labels.summary_html_snippet || "",
+            link: feed.labels.link,
+            // Add other data if needed
+        };
+
+        // 1. Update the Svelte store (for immediate use by detail page)
+        selectedFeed.set(feedDetailData);
+
+        // --- Add this block to save data to sessionStorage ---
+        try {
+            sessionStorage.setItem(
+                "selectedFeedDetail", // Use the key the detail page expects
+                JSON.stringify(feedDetailData),
+            );
+        } catch (e) {
+            console.error("Failed to save feed detail to sessionStorage:", e);
+        }
+        // --- End of added block ---
+
+        // --- Store item ID to be marked as read upon return ---
+        try {
+            sessionStorage.setItem(MARK_ON_MOBILE_KEY, itemId);
+        } catch (e) {
+            console.error("Failed to save item ID to sessionStorage:", e);
+        }
+        // ---------------------------------------------------------
+
+        // 3. Navigate to the detail page
+        goto("/feed-detail");
+    }
+
+    // Function to handle marking an item as read via context menu (now calls core function)
+    function handleMarkAsRead(event: MouseEvent, feed: FeedVO) {
+        event.preventDefault();
+        const itemId = getFeedItemId(feed);
+        markItemRead(itemId); // Call the core marking function
+        hideTooltip(0); // Still hide tooltip if it was somehow visible
     }
 
     // Fetch initial data, load read items, and prepare audio on component mount
     onMount(() => {
+        // --- Mobile Detection ---
+        if (typeof window !== "undefined" && window.matchMedia) {
+            const mediaQueryList = window.matchMedia(
+                "(hover: none) and (pointer: coarse)",
+            );
+            isMobile = mediaQueryList.matches;
+        }
+
+        if (typeof sessionStorage !== "undefined") {
+            try {
+                const itemIdToMark = sessionStorage.getItem(MARK_ON_MOBILE_KEY);
+                if (itemIdToMark) {
+                    // IMPORTANT: Remove the key immediately *before* marking
+                    sessionStorage.removeItem(MARK_ON_MOBILE_KEY);
+                    // Use tick() to ensure DOM updates from initial load/filtering are processed
+                    // before potentially removing the item with the mark-as-read animation.
+                    tick().then(() => {
+                        markItemRead(itemIdToMark);
+                    });
+                }
+            } catch (e) {
+                console.error(
+                    "Failed to access sessionStorage for mark on return:",
+                    e,
+                );
+            }
+        }
+        // --------------------------------------------------------------
+
         // Load group by preference first
         try {
             const savedGroupLabel = localStorage.getItem(
@@ -938,33 +1015,48 @@
                                         on:contextmenu={(e) =>
                                             handleMarkAsRead(e, feed)}
                                         out:shrinkFadeOut={{ duration: 500 }}
-                                        title={$_("past24h.markAsReadHint")}
+                                        title={!isMobile
+                                            ? $_("past24h.markAsReadHint")
+                                            : ""}
                                     >
                                         <a
                                             href={feed.labels.link}
-                                            target="_blank"
+                                            target={!isMobile
+                                                ? "_blank"
+                                                : undefined}
                                             rel="noopener noreferrer"
                                             class="text-primary hover:text-secondary break-words hover:underline"
-                                            on:mouseenter={(e) => {
-                                                // Get the parent list item (li) as the anchor
-                                                const targetElement =
-                                                    e.currentTarget as HTMLElement;
-                                                const anchorEl =
-                                                    targetElement.closest("li");
-                                                // When mouse enters the link, show tooltip and cancel any pending hide
-                                                cancelHideTooltip();
-                                                showTooltip(
-                                                    e,
-                                                    anchorEl, // Pass the li element as anchor
-                                                    feed.labels
-                                                        .summary_html_snippet,
-                                                    feed.labels.title ||
-                                                        $_(
-                                                            "past24h.untitledFeed",
-                                                        ), // Use translated default title
-                                                );
-                                            }}
-                                            on:mouseleave={() => hideTooltip()}
+                                            on:click={isMobile
+                                                ? (e) =>
+                                                      handleFeedClickMobile(
+                                                          e,
+                                                          feed,
+                                                      )
+                                                : undefined}
+                                            on:mouseenter={!isMobile
+                                                ? (e) => {
+                                                      const targetElement =
+                                                          e.currentTarget as HTMLElement;
+                                                      const anchorEl =
+                                                          targetElement.closest(
+                                                              "li",
+                                                          );
+                                                      cancelHideTooltip();
+                                                      showTooltip(
+                                                          e,
+                                                          anchorEl,
+                                                          feed.labels
+                                                              .summary_html_snippet,
+                                                          feed.labels.title ||
+                                                              $_(
+                                                                  "past24h.untitledFeed",
+                                                              ),
+                                                      );
+                                                  }
+                                                : undefined}
+                                            on:mouseleave={!isMobile
+                                                ? () => hideTooltip()
+                                                : undefined}
                                         >
                                             {#if FEED_TITLE_PREFIX_LABEL && FEED_TITLE_PREFIX_LABEL !== selectedGroupByLabel && feed.labels[FEED_TITLE_PREFIX_LABEL]}
                                                 <span class="mr-1 opacity-60"

@@ -157,5 +157,9 @@
     },
     "announcement": {
         "known": "I know"
+    },
+    "feedDetail": {
+        "backButton": "Go Back & Mark as Read",
+        "visitSourceButton": "Visit Source"
     }
 }
