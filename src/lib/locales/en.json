@@ -95,6 +95,7 @@
         "advancedConfig": "Advanced Config"
     },
     "past24h": {
+        "fullArticle": "View Full Article",
         "addSourceButton": "Add Source",
         "searchPlaceholder": "Search feeds & get summary...",
         "searchButton": "Search",

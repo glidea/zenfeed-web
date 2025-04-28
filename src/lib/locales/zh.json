@@ -95,6 +95,7 @@
         "advancedConfig": "高级配置"
     },
     "past24h": {
+        "fullArticle": "查看全文",
         "addSourceButton": "添加源",
         "searchPlaceholder": "搜索并生成总结...",
         "searchButton": "搜索",
