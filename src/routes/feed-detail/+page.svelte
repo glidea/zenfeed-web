@@ -1,10 +1,10 @@
 <script lang="ts">
-    import { selectedFeed } from "$lib/stores/feedStore";
+    import { selectedFeedStore } from "$lib/stores/feedStore";
     import { onMount } from "svelte";
     import { _ } from "svelte-i18n"; // Import translation function
 
     // Use the reactive $ prefix to subscribe to the store value
-    let feedData = $selectedFeed;
+    let feedData = $selectedFeedStore;
 
     // Handle direct navigation case (store might be empty)
     onMount(() => {
@@ -16,7 +16,7 @@
                 if (storedDataString) {
                     const parsedData = JSON.parse(storedDataString);
                     // Update the store, which will update reactive 'feedData'
-                    selectedFeed.set(parsedData);
+                    selectedFeedStore.set(parsedData);
                     // Update local variable immediately if needed before store reaction
                     feedData = parsedData;
                 } else {

@@ -1,11 +1,5 @@
 <script lang="ts">
-    import {
-        onMount,
-        tick,
-        onDestroy,
-        beforeUpdate,
-        afterUpdate,
-    } from "svelte"; // Added beforeUpdate, afterUpdate
+    import { onMount, tick, onDestroy, afterUpdate } from "svelte"; // Added beforeUpdate, afterUpdate
     import { marked } from "marked";
     import { fly } from "svelte/transition";
     import { cubicOut } from "svelte/easing";
@@ -13,8 +7,8 @@
     import { getTargetApiUrl } from "$lib/utils/apiUtils";
     import { env } from "$env/dynamic/public";
     import { goto } from "$app/navigation";
-    import { selectedFeed as selectedFeedStore } from "$lib/stores/feedStore"; // Renamed import to avoid conflict
-
+    import { selectedFeedStore, queryFeedsStore } from "$lib/stores/feedStore"; // Renamed import to avoid conflict
+    import { get } from "svelte/store";
     const disableAddSource = env.PUBLIC_DISABLE_ADD_SOURCE === "true";
     const disableSearchTerm = env.PUBLIC_DISABLE_SEARCH_TERM === "true";
 
@@ -44,6 +38,7 @@
     const GROUP_BY_LABEL_STORAGE_KEY = "zenfeed_group_by_label";
     const ACTIVE_GROUP_NAME_STORAGE_KEY = "zenfeed_active_group_name"; // New Key for active tab
     const SCROLL_POSITION_STORAGE_KEY = "zenfeed_scroll_position"; // Key for scroll position
+    const NAVIGATING_TO_DETAIL_KEY = "zenfeed_navigating_to_detail"; // NEW: Key for navigation flag
     const DEFAULT_GROUP_BY_LABEL =
         env.PUBLIC_DEFAULT_GROUP_BY_LABEL || "source";
     const FEED_TITLE_PREFIX_LABEL = env.PUBLIC_FEED_TITLE_PREFIX_LABEL;
@@ -334,12 +329,18 @@
             }
 
             const data: QueryResponse = await response.json();
-            searchResults = data; // This triggers the reactive update for feedsWithIds and grouping
-            updateAvailableLabels(data.feeds); // Determine labels before first grouping attempt
-            // Grouping now happens reactively via feedsWithIds $: block
+            queryFeedsStore.set(data); // NEW: Update the store with fetched data
+            searchResults = data; // Update local state (triggers reactive updates)
+            updateAvailableLabels(data.feeds);
 
-            // Check for scroll restoration *after* fetch success
-            if (typeof sessionStorage !== "undefined" && isMobile) {
+            // Check for scroll restoration *after* fetch success (if not returning from detail)
+            const isReturning =
+                sessionStorage.getItem(NAVIGATING_TO_DETAIL_KEY) === "true";
+            if (
+                !isReturning &&
+                typeof sessionStorage !== "undefined" &&
+                isMobile
+            ) {
                 const savedScroll = sessionStorage.getItem(
                     SCROLL_POSITION_STORAGE_KEY,
                 );
@@ -350,10 +351,11 @@
         } catch (e: any) {
             console.error("Failed to fetch feeds:", e);
             error = e.message || $_("past24h.errorLoadingDefault");
-            itemIdToMarkOnReturn = null; // Clear if fetch fails, maybe unnecessary but safe
+            searchResults = null; // Clear results on error
+            queryFeedsStore.set(null); // Clear cache on error
+            itemIdToMarkOnReturn = null;
         } finally {
             isLoading = false;
-            // Auto-select first tab happens reactively
         }
     }
 
@@ -447,6 +449,7 @@
 
     function handleSearch() {
         if (isLoading) return;
+        queryFeedsStore.set(null); // NEW: Clear cache on new search
         fetchFeeds();
     }
 
@@ -473,16 +476,17 @@
             updatedReadItems.set(itemId, nowTimestamp);
             readItems = updatedReadItems; // Trigger reactivity for filtering
 
-            // --- Find the next feed to select ---
+            // --- Find the next feed to select (Desktop) ---
             let nextSelectedFeed: FeedVO | null = null;
-            if (activeGroupName && groupedFeeds[activeGroupName]) {
+            if (!isMobile && activeGroupName && groupedFeeds[activeGroupName]) {
+                // Check if not mobile
                 const currentGroupOriginalFeeds = groupedFeeds[activeGroupName];
                 const markedIndex = currentGroupOriginalFeeds.findIndex(
                     (feed) => feed.id === itemId,
                 );
 
                 if (markedIndex !== -1) {
-                    // Try finding the next unread item
+                    // Try finding the next *unread* item in the current group
                     for (
                         let i = markedIndex + 1;
                         i < currentGroupOriginalFeeds.length;
@@ -490,13 +494,13 @@
                     ) {
                         const potentialNextFeed = currentGroupOriginalFeeds[i];
                         if (!readItems.has(potentialNextFeed.id!)) {
-                            // Check against the *updated* readItems
+                            // Check against *updated* readItems
                             nextSelectedFeed = potentialNextFeed;
                             break;
                         }
                     }
 
-                    // If no next unread item, try finding the previous unread item
+                    // If no next unread item, try finding the previous *unread* item
                     if (!nextSelectedFeed) {
                         for (let i = markedIndex - 1; i >= 0; i--) {
                             const potentialPrevFeed =
@@ -508,28 +512,17 @@
                         }
                     }
                     // If still no unread item found (neither next nor previous),
-                    // nextSelectedFeed remains null.
+                    // nextSelectedFeed remains null, which will clear the detail panel.
                 } else {
-                    // If the marked item wasn't found in the *current* active group's original list
-                    // (might happen if the group changed quickly or edge case),
-                    // keep the current selection unless the marked item *was* the selected one.
+                    // If the marked item wasn't found (edge case?), keep selection unless it was the marked one
                     if (selectedFeedDesktop?.id === itemId) {
                         nextSelectedFeed = null;
                     } else {
                         nextSelectedFeed = selectedFeedDesktop; // Keep existing selection
                     }
                 }
-            } else {
-                // No active group, clear selection if the marked item was selected
-                if (selectedFeedDesktop?.id === itemId) {
-                    nextSelectedFeed = null;
-                } else {
-                    nextSelectedFeed = selectedFeedDesktop; // Keep existing selection
-                }
+                selectedFeedDesktop = nextSelectedFeed; // Update selection
             }
-
-            // Update the selected feed for the detail view
-            selectedFeedDesktop = nextSelectedFeed;
 
             // --- Save read items ---
             try {
@@ -553,7 +546,7 @@
     // Mobile click handler (unchanged, navigates)
     function handleFeedClickMobile(event: MouseEvent, feed: FeedVO) {
         event.preventDefault();
-        const itemId = feed.id!; // Use pre-calculated ID
+        const itemId = feed.id!;
 
         // --- SAVE SCROLL POSITION ---
         if (
@@ -566,13 +559,15 @@
                     SCROLL_POSITION_STORAGE_KEY,
                     String(window.scrollY),
                 );
+                sessionStorage.setItem(NAVIGATING_TO_DETAIL_KEY, "true"); // NEW: Set navigation flag
             } catch (e) {
                 console.error(
-                    "Failed to save scroll position to sessionStorage:",
+                    "Failed to save scroll/navigation state to sessionStorage:",
                     e,
                 );
             }
         }
+
         // --- END SAVE SCROLL POSITION ---
 
         const feedDetailData = {
@@ -589,8 +584,7 @@
                 "selectedFeedDetail",
                 JSON.stringify(feedDetailData),
             );
-            // Set the key to be read on return
-            sessionStorage.setItem(MARK_ON_MOBILE_KEY, itemId);
+            sessionStorage.setItem(MARK_ON_MOBILE_KEY, itemId); // Set the key to be read on return
         } catch (e) {
             console.error(
                 "Failed to save feed detail/ID to sessionStorage:",
@@ -646,12 +640,11 @@
     onMount(() => {
         // --- Mobile Detection ---
         if (typeof window !== "undefined" && window.matchMedia) {
-            const mediaQueryList = window.matchMedia("(max-width: 767px)"); // Use max-width for mobile detection
+            const mediaQueryList = window.matchMedia("(max-width: 767px)");
             isMobile = mediaQueryList.matches;
             const updateMobileStatus = (e: MediaQueryListEvent) => {
                 const wasMobile = isMobile;
                 isMobile = e.matches;
-                // If switching FROM mobile TO desktop, remove potential leftover scroll pos
                 if (
                     wasMobile &&
                     !isMobile &&
@@ -662,7 +655,6 @@
                 }
             };
             mediaQueryList.addEventListener("change", updateMobileStatus);
-            // Cleanup listener on destroy
             onDestroy(() =>
                 mediaQueryList.removeEventListener(
                     "change",
@@ -671,33 +663,71 @@
             );
         }
 
-        // --- Check and remove item ID to mark on return ---
+        let cacheHit = false;
+        let markItemFromDetailId: string | null = null; // Temporary store for ID to mark
+
+        // --- Check if returning from detail page (Mobile) ---
         if (typeof sessionStorage !== "undefined") {
-            try {
-                // Read the ID first
-                itemIdToMarkOnReturn =
-                    sessionStorage.getItem(MARK_ON_MOBILE_KEY);
-                if (itemIdToMarkOnReturn) {
-                    // Remove the key immediately after reading
-                    sessionStorage.removeItem(MARK_ON_MOBILE_KEY);
+            const isReturning =
+                sessionStorage.getItem(NAVIGATING_TO_DETAIL_KEY) === "true";
+            if (isReturning) {
+                sessionStorage.removeItem(NAVIGATING_TO_DETAIL_KEY); // Clean up flag
+
+                // Try loading from cache first
+                const cachedData = get(queryFeedsStore);
+                if (cachedData) {
+                    console.log("Loading feeds from cache on return.");
+                    searchResults = cachedData; // This triggers reactive updates
+                    // updateAvailableLabels(cachedData.feeds); // Labels should be same if cache is valid
+                    isLoading = false;
+                    cacheHit = true;
+
+                    // Check for scroll restoration (should happen after cache load)
+                    const savedScroll = sessionStorage.getItem(
+                        SCROLL_POSITION_STORAGE_KEY,
+                    );
+                    if (savedScroll) {
+                        shouldRestoreScroll = true; // Flag for afterUpdate
+                    } else {
+                        // If returning but no scroll pos, reset to top (or desired behavior)
+                        window.scrollTo(0, 0);
+                    }
+
+                    // Get the ID to mark read, but don't mark yet (wait for readItems)
+                    try {
+                        markItemFromDetailId =
+                            sessionStorage.getItem(MARK_ON_MOBILE_KEY);
+                        if (markItemFromDetailId) {
+                            sessionStorage.removeItem(MARK_ON_MOBILE_KEY); // Clean up immediately
+                            console.log(
+                                "Found item to mark on return (from cache):",
+                                markItemFromDetailId,
+                            );
+                        }
+                    } catch (e) {
+                        console.error(
+                            "Failed access sessionStorage for mark on return (cache path):",
+                            e,
+                        );
+                        markItemFromDetailId = null;
+                    }
+                } else {
                     console.log(
-                        "Found item to mark on return:",
-                        itemIdToMarkOnReturn,
-                    ); // Debug log
+                        "Returning, but cache is empty. Fetching fresh data.",
+                    );
+                    // If cache is empty even when returning, proceed to fetch fresh data below
                 }
-            } catch (e) {
-                console.error(
-                    "Failed access sessionStorage for mark on return:",
-                    e,
-                );
-                itemIdToMarkOnReturn = null; // Ensure it's null on error
+            } else {
+                // Not returning from detail view, check for scroll pos from other scenarios if needed
+                // (Current logic in fetchFeeds handles this, might be redundant here)
+                // const savedScroll = sessionStorage.getItem(SCROLL_POSITION_STORAGE_KEY);
+                // if (savedScroll && isMobile) {
+                //     shouldRestoreScroll = true;
+                // }
             }
-        } else {
-            itemIdToMarkOnReturn = null; // Ensure null if sessionStorage unavailable
         }
 
-        // --- Load Preferences ---
-        // Load group preference
+        // --- Load Preferences --- (Order matters - load before potentially using defaults in grouping)
         try {
             const savedGroupLabel = localStorage.getItem(
                 GROUP_BY_LABEL_STORAGE_KEY,
@@ -707,14 +737,12 @@
             console.error("Failed to load group by preference:", e);
         }
 
-        // Load last active group name preference
         try {
             const savedActiveGroupName = localStorage.getItem(
                 ACTIVE_GROUP_NAME_STORAGE_KEY,
             );
-            if (savedActiveGroupName) {
+            if (savedActiveGroupName)
                 initialActiveGroupName = savedActiveGroupName;
-            }
         } catch (e) {
             console.error("Failed to load active group name preference:", e);
         }
@@ -724,7 +752,7 @@
         markAsReadSound.volume = 0.5;
         markAsReadSound.load();
 
-        // --- Load read items ---
+        // --- Load read items --- (Load *after* potential cache load, but *before* marking item)
         try {
             const storedData = localStorage.getItem(READ_ITEMS_STORAGE_KEY);
             if (storedData) {
@@ -741,53 +769,70 @@
                         "Invalid read items format in localStorage. Clearing.",
                     );
                     localStorage.removeItem(READ_ITEMS_STORAGE_KEY);
-                    readItems = new Map(); // Initialize empty map
+                    readItems = new Map();
                 }
             } else {
-                readItems = new Map(); // Initialize empty map if nothing stored
+                readItems = new Map();
             }
         } catch (e) {
             console.error("Failed to load/parse read items:", e);
             localStorage.removeItem(READ_ITEMS_STORAGE_KEY);
-            readItems = new Map(); // Initialize empty map on error
+            readItems = new Map();
         }
 
-        // Fetch initial data and *then* try to mark item read
-        fetchFeeds().then(() => {
-            // --- Attempt to mark item read AFTER data fetch ---
-            if (itemIdToMarkOnReturn) {
-                const idToMark = itemIdToMarkOnReturn; // Copy to local variable
-                itemIdToMarkOnReturn = null; // Clear the component-level variable
+        // --- Mark item read from detail page (if applicable and cache was hit) ---
+        if (markItemFromDetailId && cacheHit) {
+            const idToMark = markItemFromDetailId; // Use local copy
+            markItemFromDetailId = null; // Clear temporary variable
 
-                // Use tick to wait for DOM updates potentially triggered by fetchFeeds
-                tick().then(() => {
-                    // Ensure readItems map exists and the item ID is present in the fetched feeds
-                    if (
-                        readItems &&
-                        feedsWithIds.some((f) => f.id === idToMark)
-                    ) {
-                        if (!readItems.has(idToMark)) {
-                            // Check if not already marked
-                            console.log("Marking item on return:", idToMark); // Debug log
-                            markItemRead(idToMark);
-                        } else {
-                            console.log(
-                                "Item to mark on return already marked:",
-                                idToMark,
-                            ); // Debug log
-                        }
-                    } else {
-                        console.warn(
-                            "Item to mark on return not found in current feed list or readItems not loaded:",
+            // Use tick to ensure reactive updates from searchResults and readItems have propagated
+            tick().then(() => {
+                // Ensure readItems map exists and the item ID is present in the feeds from cache
+                if (readItems && feedsWithIds.some((f) => f.id === idToMark)) {
+                    if (!readItems.has(idToMark)) {
+                        // Check if not already marked
+                        console.log(
+                            "Marking item on return (after cache load):",
                             idToMark,
-                        ); // Debug log
+                        );
+                        markItemRead(idToMark);
+                    } else {
+                        console.log(
+                            "Item to mark on return already marked:",
+                            idToMark,
+                        );
                     }
-                });
+                } else {
+                    console.warn(
+                        "Item to mark on return not found in cached feed list or readItems not loaded:",
+                        idToMark,
+                    );
+                }
+            });
+        }
+
+        // --- Fetch initial data ONLY if cache was not hit ---
+        if (!cacheHit) {
+            fetchFeeds(); // fetchFeeds now updates the store internally
+            // The logic for marking item read on return when fetchFeeds is called
+            // needs to remain separate or be handled carefully if needed for non-cache scenarios.
+            // Currently, we assume marking is only needed when returning and using cache.
+        } else {
+            // If cache was hit, ensure labels are processed (might be redundant if searchResults update handles it)
+            if (searchResults?.feeds) {
+                updateAvailableLabels(searchResults.feeds);
+                // Ensure grouping happens by triggering reactivity (might already happen via searchResults)
+                feedsWithIds = searchResults.feeds.map((feed) => ({
+                    ...feed,
+                    id: getFeedItemId(feed),
+                }));
+                // Trigger readItems filter update explicitly after cache load + readItems load
+                readItems = new Map(readItems);
             }
-        });
+        }
     });
 
-    // --- NEW: Use afterUpdate for reliable DOM access ---
+    // --- afterUpdate for scroll restoration --- (Keep as is)
     afterUpdate(() => {
         if (
             shouldRestoreScroll &&
@@ -800,15 +845,13 @@
             );
             const scrollPosition = parseInt(savedScroll || "0", 10);
             if (!isNaN(scrollPosition) && scrollPosition > 0) {
-                // Wait one more microtask to be extra sure layout is stable
                 Promise.resolve().then(() => {
                     window.scrollTo(0, scrollPosition);
-                    console.log("Scroll restored to:", scrollPosition); // For debugging
+                    console.log("Scroll restored to:", scrollPosition);
                 });
             }
-            // Clean up regardless of whether we scrolled
             sessionStorage.removeItem(SCROLL_POSITION_STORAGE_KEY);
-            shouldRestoreScroll = false; // Reset the flag
+            shouldRestoreScroll = false;
         }
     });
 
