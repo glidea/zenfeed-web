@@ -173,11 +173,7 @@
         : "";
 
     // Reactive variable for the right panel detail view HTML
-    $: rightPanelHtml = selectedFeedDesktop?.labels?.summary_html_snippet
-        ? (marked.parse(
-              selectedFeedDesktop.labels.summary_html_snippet,
-          ) as string)
-        : "";
+    $: rightPanelHtml = selectedFeedDesktop?.labels?.summary_html_snippet ?? "";
 
     // NEW: Reset scroll position of the detail panel when the selected feed changes
     $: if (detailPanelContentElement && selectedFeedDesktop) {
@@ -1411,3 +1407,5 @@
         </div>
     {/if}
 </div>
+
+{@html rightPanelHtml}
