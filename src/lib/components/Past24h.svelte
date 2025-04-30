@@ -1407,5 +1407,3 @@
         </div>
     {/if}
 </div>
-
-{@html rightPanelHtml}
