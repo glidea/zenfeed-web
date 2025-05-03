@@ -42,6 +42,8 @@
     const ACTIVE_GROUP_NAME_STORAGE_KEY = "zenfeed_active_group_name"; // New Key for active tab
     const SCROLL_POSITION_STORAGE_KEY = "zenfeed_scroll_position"; // Key for scroll position
     const NAVIGATING_TO_DETAIL_KEY = "zenfeed_navigating_to_detail"; // NEW: Key for navigation flag
+    const SWIPE_GROUP_LABEL_KEY = "zenfeed_swipe_group_label"; // NEW: Key for swipe context
+    const SWIPE_GROUP_NAME_KEY = "zenfeed_swipe_group_name"; // NEW: Key for swipe context
     const DEFAULT_GROUP_BY_LABEL =
         env.PUBLIC_DEFAULT_GROUP_BY_LABEL || "source";
     const FEED_TITLE_PREFIX_LABEL = env.PUBLIC_FEED_TITLE_PREFIX_LABEL;
@@ -469,7 +471,7 @@
         event.preventDefault();
         const itemId = getFeedItemId(feed); // Use imported getFeedItemId
 
-        // --- SAVE SCROLL POSITION ---
+        // --- SAVE SCROLL POSITION & NAVIGATION CONTEXT ---
         if (
             isMobile &&
             typeof window !== "undefined" &&
@@ -480,16 +482,26 @@
                     SCROLL_POSITION_STORAGE_KEY,
                     String(window.scrollY),
                 );
-                sessionStorage.setItem(NAVIGATING_TO_DETAIL_KEY, "true"); // NEW: Set navigation flag
+                sessionStorage.setItem(NAVIGATING_TO_DETAIL_KEY, "true"); // Set navigation flag
+
+                // --- NEW: Store grouping context for swiping ---
+                const groupName =
+                    feed.labels[selectedGroupByLabel] ||
+                    $_("past24h.uncategorizedGroup");
+                sessionStorage.setItem(
+                    SWIPE_GROUP_LABEL_KEY,
+                    selectedGroupByLabel,
+                );
+                sessionStorage.setItem(SWIPE_GROUP_NAME_KEY, groupName);
+                // --- END NEW ---
             } catch (e) {
                 console.error(
-                    "Failed to save scroll/navigation state to sessionStorage:",
+                    "Failed to save scroll/navigation/group state to sessionStorage:",
                     e,
                 );
             }
         }
-
-        // --- END SAVE SCROLL POSITION ---
+        // --- END SAVE ---
 
         const feedDetailData = {
             id: itemId, // Pass the ID as well

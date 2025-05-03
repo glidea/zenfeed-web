@@ -7,8 +7,9 @@
     import { readItemsStore } from "$lib/stores/readStateStore";
     import { fly, fade } from "svelte/transition";
     import { cubicOut, elasticOut } from "svelte/easing";
-    import { getFeedItemId } from "$lib/utils/feedUtils";
+    import { getFeedItemId, compareFeeds } from "$lib/utils/feedUtils"; // Import getFeedItemId and compareFeeds
     import { get } from "svelte/store"; // Import get function from svelte/store
+    import type { FeedVO } from "$lib/types/feed"; // Import FeedVO type
 
     // Use the reactive $ prefix to subscribe to the store value
     let feedData = $selectedFeedStore;
@@ -17,6 +18,11 @@
     let detailContentElement: HTMLDivElement | null = null; // Reference to the content element
     const siteUrl = env.PUBLIC_SITE_URL; // Get site URL for QR code
 
+    // --- Constants for Session Storage ---
+    const SWIPE_GROUP_LABEL_KEY = "zenfeed_swipe_group_label";
+    const SWIPE_GROUP_NAME_KEY = "zenfeed_swipe_group_name";
+    const SELECTED_FEED_DETAIL_KEY = "selectedFeedDetail";
+
     // Touch-related variables
     let startY = 0;
     let endY = 0;
@@ -24,34 +30,23 @@
     let translateY = 0;
     let opacity = 1;
     let isTransitioning = false;
-    let showNavigationHint = false;
-    let navigateDirection: "prev" | "next" | null = null;
-    let feedsList: any[] = [];
+    let feedsList: FeedVO[] = []; // Explicitly type as FeedVO array
     let currentFeedIndex = -1;
     let swipeStartTime = 0;
     let autoSlideDuration = 300; // Auto slide animation duration (ms)
     let feedContainer: HTMLDivElement;
-    let hintTimeout: ReturnType<typeof setTimeout>;
 
     // Function to check if next feed exists
     $: hasNextFeed = currentFeedIndex < feedsList.length - 1;
 
-    // Show navigation hint
-    function showHint() {
-        if (hintTimeout) clearTimeout(hintTimeout);
-        showNavigationHint = true;
-        hintTimeout = setTimeout(() => {
-            showNavigationHint = false;
-        }, 1500);
-    }
-
     // Initialize and get all swipeable feeds
     onMount(async () => {
-        // Handle direct navigation case
+        // Handle direct navigation case: Load selected feed first
         if (!feedData) {
             try {
-                const storedDataString =
-                    sessionStorage.getItem("selectedFeedDetail");
+                const storedDataString = sessionStorage.getItem(
+                    SELECTED_FEED_DETAIL_KEY,
+                );
                 if (storedDataString) {
                     const parsedData = JSON.parse(storedDataString);
                     selectedFeedStore.set(parsedData);
@@ -62,51 +57,105 @@
                     "Failed to read feed detail from sessionStorage:",
                     e,
                 );
+                // Optionally handle error, e.g., redirect back or show message
             }
         }
 
-        // Get feeds list from cache and filter out read items
-        const cachedData = $queryFeedsStore;
-        if (cachedData?.feeds && feedData?.id) {
-            // Get current read state
-            const readItemsMap = get(readItemsStore);
+        // If feedData is still null after trying to load, we can't proceed
+        if (!feedData?.id) {
+            console.error("Feed data could not be loaded.");
+            // Optionally navigate back or show an error state
+            // goBack(); // Example: navigate back if data is missing
+            return; // Stop execution if essential data is missing
+        }
 
-            // Filter out read items
-            feedsList = cachedData.feeds.filter((feed) => {
-                const feedId = getFeedItemId(feed);
-                return !readItemsMap.has(feedId);
-            });
+        // --- Construct the swipeable list (feedsList) ---
+        const cachedData = get(queryFeedsStore);
+        const readItemsMap = get(readItemsStore);
+        const currentFeedId = feedData.id;
 
-            // If current item is not in read list, add it to the swipeable list
-            const currentFeedId = feedData.id;
-            if (!readItemsMap.has(currentFeedId)) {
-                // Find current feed position in filtered list
-                currentFeedIndex = feedsList.findIndex(
-                    (feed) => getFeedItemId(feed) === currentFeedId,
+        if (cachedData?.feeds) {
+            let potentialSwipeList: FeedVO[] = [];
+            let swipeGroupLabel: string | null = null;
+            let swipeGroupName: string | null = null;
+
+            // Try to get grouping context from sessionStorage
+            try {
+                swipeGroupLabel = sessionStorage.getItem(SWIPE_GROUP_LABEL_KEY);
+                swipeGroupName = sessionStorage.getItem(SWIPE_GROUP_NAME_KEY);
+                // console.log("Swipe Context:", swipeGroupLabel, swipeGroupName);
+            } catch (e) {
+                console.error(
+                    "Failed to read swipe context from sessionStorage:",
+                    e,
                 );
+            }
 
-                // If current feed is not in the list (shouldn't happen, but just in case)
-                if (currentFeedIndex === -1) {
-                    // Find current feed in original list
-                    const currentFeed = cachedData.feeds.find(
-                        (feed) => getFeedItemId(feed) === currentFeedId,
-                    );
-
-                    if (currentFeed) {
-                        // Add current feed to the beginning of the list
-                        feedsList.unshift(currentFeed);
-                        currentFeedIndex = 0;
-                    }
-                }
+            // 1. Filter by group (if context is available)
+            if (swipeGroupLabel && swipeGroupName) {
+                const uncategorized = $_("past24h.uncategorizedGroup"); // Get translation for comparison
+                potentialSwipeList = cachedData.feeds.filter((feed) => {
+                    const groupValue =
+                        feed.labels[swipeGroupLabel!] || uncategorized;
+                    return groupValue === swipeGroupName;
+                });
+                // console.log("Filtered by group:", potentialSwipeList.length);
             } else {
-                // If current item is read but still viewing, set index to 0 for navigation to other unread items
-                currentFeedIndex = 0;
+                // No group context, use all feeds as the base
+                potentialSwipeList = [...cachedData.feeds];
+                // console.log("Using all feeds as base:", potentialSwipeList.length);
+            }
+
+            // 2. Filter out read items (unless it's the currently viewed item)
+            potentialSwipeList = potentialSwipeList.filter((feed) => {
+                const feedId = getFeedItemId(feed);
+                return !readItemsMap.has(feedId) || feedId === currentFeedId;
+            });
+            // console.log("Filtered by read status:", potentialSwipeList.length);
+
+            // 3. Sort the list using the same logic as Past24h
+            potentialSwipeList.sort(compareFeeds);
+            // console.log("Sorted list:", potentialSwipeList.map(f => getFeedItemId(f)));
+
+            // 4. Assign to feedsList
+            feedsList = potentialSwipeList;
+
+            // 5. Find the index of the current feed in the final list
+            currentFeedIndex = feedsList.findIndex(
+                (feed) => getFeedItemId(feed) === currentFeedId,
+            );
+
+            // If the current feed wasn't found in the final list (e.g., it was read and not part of the group)
+            // This shouldn't normally happen if we include the currentFeedId in the read filter step,
+            // but as a fallback, reset index or handle appropriately.
+            if (currentFeedIndex === -1) {
+                console.warn(
+                    "Current feed ID not found in the final swipe list. Resetting index.",
+                );
+                // Decide fallback: Maybe set to 0 if list not empty, or handle error.
+                currentFeedIndex = feedsList.length > 0 ? 0 : -1;
+                // If index is 0, update feedData to the first item in the list?
+                // if (currentFeedIndex === 0) {
+                //     navigateToFeed(0); // Be careful of infinite loops or unwanted navigation
+                // }
+            }
+
+            // console.log("Final feedsList length:", feedsList.length);
+            // console.log("Current feed index:", currentFeedIndex);
+        } else {
+            console.warn(
+                "No cached feed data found for swipe list construction.",
+            );
+            // Handle case where cache is empty but we are on the detail page.
+            // Maybe just include the current feed?
+            if (feedData) {
+                // Need to reconstruct a FeedVO-like object if feedData is minimal
+                // This might be complex. Simplest is likely an empty list.
+                feedsList = [];
+                currentFeedIndex = -1;
             }
         }
-
-        // Show navigation hint on first load
-        await tick();
-        showHint();
+        // --- End Constructing swipeable list ---
     });
 
     // Handle touch start event
@@ -122,47 +171,44 @@
 
     // Handle touch move event
     function handleTouchMove(event: TouchEvent) {
-        if (!isDragging) return;
+        if (!isDragging || !feedContainer) return; // Add check for feedContainer
 
         endY = event.touches[0].clientY;
-        const diffY = endY - startY;
-
-        // Determine swipe direction
-        if (diffY > 0 && currentFeedIndex > 0) {
-            // Swipe down - previous
-            navigateDirection = "prev";
-            translateY = Math.min(diffY, window.innerHeight * 0.5);
-            opacity = 1 - Math.abs(translateY) / (window.innerHeight * 2);
-        } else if (diffY < 0 && currentFeedIndex < feedsList.length - 1) {
-            // Swipe up - next
-            navigateDirection = "next";
-            translateY = Math.max(diffY, -window.innerHeight * 0.5);
-            opacity = 1 - Math.abs(translateY) / (window.innerHeight * 2);
-        } else {
-            // Elastic damping effect when no more content
-            translateY = diffY * 0.2;
-            opacity = 1 - Math.abs(translateY) / (window.innerHeight * 3);
-        }
+        // Only track endY. Do not modify translateY or opacity here.
+        // Let the browser handle page scrolling during move.
+        // We will determine action solely on handleTouchEnd.
     }
 
     // Handle touch end event
     async function handleTouchEnd() {
-        if (!isDragging) return;
+        if (!isDragging || !feedContainer) return; // Add check for feedContainer
         isDragging = false;
 
         const swipeDuration = Date.now() - swipeStartTime;
         const swipeDistance = Math.abs(endY - startY);
         const isQuickSwipe = swipeDuration < 300 && swipeDistance > 50;
-        const threshold = window.innerHeight * 0.15;
+        // Use viewport height for threshold, adjust multiplier if needed
+        const distanceThreshold = window.innerHeight * 0.15;
 
+        // Check if the PAGE is scrolled to bottom
+        const isPageScrolledToBottom =
+            window.innerHeight + window.scrollY >=
+            document.documentElement.scrollHeight - 5; // 5px tolerance for page bottom
+
+        // Check if it was a swipe up
+        const isSwipeUp = endY < startY; // Swipe direction check
+
+        // Only trigger next feed if swiping UP, PAGE at the bottom, has next feed, and sufficient movement
         if (
-            (Math.abs(translateY) > threshold || isQuickSwipe) &&
-            navigateDirection
+            isSwipeUp &&
+            isPageScrolledToBottom &&
+            (swipeDistance > distanceThreshold || isQuickSwipe) && // Check swipe distance or quickness
+            hasNextFeed // Check if there is a next feed
         ) {
             isTransitioning = true;
 
-            const targetDirection = navigateDirection === "next" ? -1 : 1;
-            translateY = targetDirection * window.innerHeight;
+            // Animate out upwards
+            translateY = -feedContainer.offsetHeight; // Use container height for animation distance
             opacity = 0;
 
             await new Promise((resolve) =>
@@ -173,54 +219,73 @@
             if (feedData?.id) {
                 readItemsStore.markRead(feedData.id);
 
-                // Remove current item from swipeable list
-                if (currentFeedIndex >= 0) {
-                    feedsList.splice(currentFeedIndex, 1);
-                    // No need to update currentFeedIndex as navigateToFeed will set it
+                // Remove current item from swipeable list if it's still there
+                const currentIndexInList = feedsList.findIndex(
+                    (feed) => getFeedItemId(feed) === feedData?.id,
+                );
+                if (currentIndexInList !== -1) {
+                    feedsList.splice(currentIndexInList, 1);
+                    // Adjust index if the removed item was before the target next item
+                    if (currentIndexInList < currentFeedIndex) {
+                        currentFeedIndex--;
+                    }
                 }
             }
 
-            // Navigate to new feed (based on direction and adjusted list)
-            if (
-                navigateDirection === "next" &&
-                currentFeedIndex < feedsList.length - 1
-            ) {
-                // No need to +1 since current item was removed
+            // Navigate to the actual next feed in the potentially modified list
+            if (currentFeedIndex < feedsList.length) {
                 navigateToFeed(currentFeedIndex);
-            } else if (navigateDirection === "prev" && currentFeedIndex > 0) {
-                navigateToFeed(currentFeedIndex - 1);
             } else if (feedsList.length > 0) {
-                // If last or first item was swiped but list still has other items
                 navigateToFeed(0);
             } else {
-                // List is empty, go back
                 setTimeout(() => {
                     goBack();
                 }, 300);
             }
 
+            // Reset state after navigation MAY start (before key block update)
+            // The actual visual reset happens when the #key block re-renders with translateY=0, opacity=1 implicitly
+            // Setting these here ensures state consistency if navigation somehow fails or is delayed.
             translateY = 0;
             opacity = 1;
             isTransitioning = false;
         } else {
-            translateY = 0;
-            opacity = 1;
+            // If swipe didn't trigger navigation, do nothing to translateY/opacity.
+            // Ensure isDragging is false and state is clean.
+            // translateY and opacity should already be 0 and 1 from handleTouchStart or last transition end.
         }
-
-        navigateDirection = null;
     }
 
     // Navigate to feed at specified index
     function navigateToFeed(index: number) {
-        if (index < 0 || index >= feedsList.length) return;
+        if (index < 0 || index >= feedsList.length) {
+            // If index is invalid (e.g., list became empty unexpectedly), go back
+            if (feedsList.length === 0) {
+                console.warn(
+                    "NavigateToFeed called with empty list, going back.",
+                );
+                goBack();
+                return;
+            }
+            // Attempt to recover by going to the first item if index is bad but list isn't empty
+            console.warn(
+                `NavigateToFeed called with invalid index ${index}, attempting to navigate to 0.`,
+            );
+            index = 0;
+            if (index >= feedsList.length) {
+                // Double check after resetting index
+                goBack();
+                return;
+            }
+        }
 
         const targetFeed = feedsList[index];
-        currentFeedIndex = index;
+        currentFeedIndex = index; // Update the index to the newly selected feed
 
         // Prepare feed data
         const feedDetailData = {
             id: getFeedItemId(targetFeed),
-            title: targetFeed.labels.title || $_("past24h.untitledFeed"),
+            title: targetFeed.labels.title || $_("past24h.untitledFeed"), // Use translated fallback
             summaryHtmlSnippet: targetFeed.labels.summary_html_snippet || "",
             link: targetFeed.labels.link,
         };
@@ -229,29 +294,27 @@
         selectedFeedStore.set(feedDetailData);
         try {
             sessionStorage.setItem(
-                "selectedFeedDetail",
+                SELECTED_FEED_DETAIL_KEY, // Use constant
                 JSON.stringify(feedDetailData),
             );
         } catch (e) {
             console.error("Failed to save feed detail to sessionStorage:", e);
         }
 
-        // Update local feedData variable
-        feedData = feedDetailData;
+        // Update local feedData variable REACTIVELY
+        feedData = feedDetailData; // This should trigger #key block update
 
-        // Force update title if needed
-        document.title = feedData.title || $_("feedDetail.pageTitle");
+        // Force update title if needed (though svelte:head should handle it)
+        // document.title = feedData.title || $_("feedDetail.pageTitle"); // Usually not needed
 
-        // Reset content scroll position
-        if (detailContentElement) {
-            detailContentElement.scrollTop = 0;
-        }
-
-        // Reset page scroll position
-        window.scrollTo(0, 0);
-
-        // Show navigation hint
-        showHint();
+        // Reset content scroll position AFTER the DOM updates
+        tick().then(() => {
+            if (detailContentElement) {
+                detailContentElement.scrollTop = 0;
+            }
+            // Reset page scroll position
+            window.scrollTo(0, 0);
+        });
     }
 
     // Function to go back to the previous page (likely the main feed list)
@@ -304,15 +367,14 @@
 </svelte:head>
 
 <div
-    class="min-h-screen p-4 md:p-8 bg-base-100 overflow-hidden relative"
+    class="min-h-screen p-4 md:p-8 bg-base-100 relative"
     bind:this={feedContainer}
-    on:touchstart={handleTouchStart}
-    on:touchmove={handleTouchMove}
-    on:touchend={handleTouchEnd}
-    on:touchcancel={handleTouchEnd}
+    on:touchstart|passive={handleTouchStart}
+    on:touchmove|passive={handleTouchMove}
+    on:touchend|passive={handleTouchEnd}
+    on:touchcancel|passive={handleTouchEnd}
 >
     {#if feedData}
-        <!-- Wrap the content block with #key feedData.id -->
         {#key feedData.id}
             <div
                 class="max-w-3xl mx-auto relative"
@@ -456,27 +518,25 @@
         {/key}
 
         <!-- Swipe Down Hint Arrow (Adjusted position) -->
-        {#if !isDragging && !isTransitioning && hasNextFeed}
-            <div
-                class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-base-content text-opacity-50 animate-bounce z-10 pointer-events-none"
-                in:fade={{ duration: 200 }}
-                out:fade={{ duration: 150 }}
+        <div
+            class="absolute bottom-4 left-1/2 transform -translate-x-1/2 text-base-content text-opacity-50 animate-bounce z-10 pointer-events-none"
+            in:fade={{ duration: 200 }}
+            out:fade={{ duration: 150 }}
+        >
+            <svg
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke-width="2"
+                stroke="currentColor"
+                class="w-6 h-6"
             >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="2"
-                    stroke="currentColor"
-                    class="w-6 h-6"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="m19.5 8.25-7.5 7.5-7.5-7.5"
-                    />
-                </svg>
-            </div>
-        {/if}
+                <path
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    d="m19.5 8.25-7.5 7.5-7.5-7.5"
+                />
+            </svg>
+        </div>
     {/if}
 </div>
