@@ -1,4 +1,11 @@
 @import "tailwindcss";
 @plugin "daisyui" {
-  themes: winter --default;
+  themes: winter --default, night --prefersdark;
+}
+
+@media (prefers-color-scheme: dark) {
+  .embedded-html-content {
+    filter: invert(1) hue-rotate(180deg);
+    background-color: var(--b1);
+  }
 }

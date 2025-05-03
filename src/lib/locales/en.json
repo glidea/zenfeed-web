@@ -117,7 +117,16 @@
         "mcpHint": "For further conversational analysis, use an MCP client, such as {cherryStudioLink}.",
         "todayReadPrefix": "Read Today",
         "todayReadSuffix": "Items",
-        "groupByLabel": "Group By"
+        "groupByLabel": "Group By",
+        "selectFeedPrompt": "Select an item from the list",
+        "selectFeedHint": "The content will be displayed here.",
+        "noItemsInGroup": "No unread items in this group.",
+        "noSummaryAvailable": "No summary available for this item.",
+        "shareButton": "Share",
+        "shareTooltip": "Copy card as image",
+        "copyStatusCopying": "Copying...",
+        "copyStatusCopied": "Copied!",
+        "copyStatusError": "Error"
     },
     "notifications": {
         "loading": "Loading settings...",

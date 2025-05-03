@@ -1,6 +1,7 @@
 import { writable } from 'svelte/store';
 
 interface SelectedFeedData {
+    id: string;
     title: string;
     summaryHtmlSnippet: string;
     link: string;

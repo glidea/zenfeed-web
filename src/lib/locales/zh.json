@@ -117,7 +117,16 @@
         "mcpHint": "如需追问，推荐使用 MCP 客户端，参考 {cherryStudioLink}。",
         "todayReadPrefix": "今日已读",
         "todayReadSuffix": "篇",
-        "groupByLabel": "分组"
+        "groupByLabel": "分组",
+        "selectFeedPrompt": "请从左侧列表中选择一项",
+        "selectFeedHint": "内容将在此处显示。",
+        "noItemsInGroup": "此分组下暂无未读项目。",
+        "noSummaryAvailable": "此项目无可用摘要。",
+        "shareButton": "一键分享",
+        "shareTooltip": "复制卡片为图片",
+        "copyStatusCopying": "复制中...",
+        "copyStatusCopied": "已复制!",
+        "copyStatusError": "失败"
     },
     "notifications": {
         "loading": "正在加载设置...",
