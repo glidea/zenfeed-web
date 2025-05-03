@@ -19,7 +19,6 @@ __debug_bin
 config.yaml
 data/
 *debug*
-*test*
 
 .svelte-kit
 node_modules
