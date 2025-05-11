@@ -126,7 +126,9 @@
         "shareTooltip": "复制卡片为图片",
         "copyStatusCopying": "复制中...",
         "copyStatusCopied": "已复制!",
-        "copyStatusError": "失败"
+        "copyStatusError": "失败",
+        "desktopRightClickTip": "右键标题标记为已读",
+        "gotItButton": "知道了"
     },
     "notifications": {
         "loading": "正在加载设置...",

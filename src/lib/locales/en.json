@@ -126,7 +126,9 @@
         "shareTooltip": "Copy card as image",
         "copyStatusCopying": "Copying...",
         "copyStatusCopied": "Copied!",
-        "copyStatusError": "Error"
+        "copyStatusError": "Error",
+        "desktopRightClickTip": "Right-click title to mark as read",
+        "gotItButton": "Got it"
     },
     "notifications": {
         "loading": "Loading settings...",

@@ -48,6 +48,7 @@
         env.PUBLIC_DEFAULT_GROUP_BY_LABEL || "source";
     const FEED_TITLE_PREFIX_LABEL = env.PUBLIC_FEED_TITLE_PREFIX_LABEL;
     const LAST_VIEWED_MOBILE_FEED_ID_KEY = "zenfeed_last_viewed_mobile_feed_id"; // NEW Key for item ID to mark on return
+    const HIDE_RIGHT_CLICK_TIP_KEY = "zenfeed_hide_right_click_tip"; // NEW: Key for hiding right-click tip
 
     // --- Types ---
     // Remove ReadItemsMap if imported from dateUtils.ts
@@ -64,6 +65,7 @@
     // let readItems: ReadItemsMap = new Map(); // REMOVED: Use readItemsStore
     let isMobile = false;
     let shouldRestoreScroll = false; // Flag to indicate scroll restoration is needed
+    let showRightClickTip = true; // NEW: State for showing the right-click tip
 
     // --- NEW State for Desktop Layout ---
     let initialActiveGroupName: string | null = null; // Store loaded group name temporarily
@@ -718,6 +720,20 @@
             console.error("Failed to load active group name preference:", e);
         }
 
+        // --- NEW: Load preference for right-click tip ---
+        if (typeof localStorage !== "undefined") {
+            try {
+                const hideTipPreference = localStorage.getItem(
+                    HIDE_RIGHT_CLICK_TIP_KEY,
+                );
+                if (hideTipPreference === "true") {
+                    showRightClickTip = false;
+                }
+            } catch (e) {
+                console.error("Failed to load right-click tip preference:", e);
+            }
+        }
+
         // --- Mark item read from detail page (if applicable and cache was hit) ---
         if (markItemFromDetailId && cacheHit) {
             const idToMark = markItemFromDetailId; // Use local copy
@@ -789,7 +805,17 @@
         }
     });
 
-    // No onDestroy needed for tooltip timeout anymore
+    // --- NEW: Function to dismiss the right-click tip ---
+    function dismissRightClickTip() {
+        showRightClickTip = false;
+        if (typeof localStorage !== "undefined") {
+            try {
+                localStorage.setItem(HIDE_RIGHT_CLICK_TIP_KEY, "true");
+            } catch (e) {
+                console.error("Failed to save right-click tip preference:", e);
+            }
+        }
+    }
 </script>
 
 <div
@@ -1106,6 +1132,25 @@
                         </div>
                     {/if}
 
+                    <!-- Desktop Right-Click Tip -->
+                    {#if showRightClickTip && sortedGroupEntries.length > 0}
+                        <div
+                            class="flex items-center justify-center text-xs text-base-content/70 py-1 mb-2 text-center gap-2"
+                        >
+                            <span>
+                                💡 <span class="italic"
+                                    >{$_("past24h.desktopRightClickTip")}</span
+                                >
+                            </span>
+                            <button
+                                class="btn btn-xs btn-ghost !text-info hover:bg-info/10 normal-case"
+                                on:click={dismissRightClickTip}
+                            >
+                                {$_("past24h.gotItButton")}
+                            </button>
+                        </div>
+                    {/if}
+
                     <!-- Feed List for Active Group -->
                     <div
                         class="flex-1 bg-base-100 border border-base-300 rounded-lg p-3 overflow-y-auto shadow-inner max-h-[65vh]"
@@ -1177,9 +1222,7 @@
                                             $_("past24h.untitledFeed")}
                                     </h2>
                                     <!-- Container for Tags, Link and Share Button -->
-                                    <div
-                                        class="flex items-center gap-4 mb-4 share-exclude"
-                                    >
+                                    <div class="flex items-center gap-4 mb-4">
                                         <!-- Inserted Tags Section -->
                                         {#if selectedFeedDesktop.labels?.tags?.trim()}
                                             <div
@@ -1200,7 +1243,7 @@
                                                     .link}
                                                 target="_blank"
                                                 rel="noopener noreferrer"
-                                                class="link-primary text-xs lg:text-sm inline-flex items-center"
+                                                class="link-primary text-xs lg:text-sm inline-flex items-center share-exclude"
                                                 tabindex="-1"
                                             >
                                                 <svg
@@ -1226,7 +1269,7 @@
 
                                         <!-- Share Button -->
                                         <button
-                                            class="btn btn-xs btn-outline btn-secondary rounded"
+                                            class="btn btn-xs btn-outline btn-secondary rounded share-exclude"
                                             on:click={handleShareAsImage}
                                             disabled={copyStatus === "copying"}
                                             title={$_("past24h.shareTooltip")}
