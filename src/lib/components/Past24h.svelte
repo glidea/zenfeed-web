@@ -506,9 +506,9 @@
         const feedDetailData = {
             id: itemId, // Pass the ID as well
             title: feed.labels.title || $_("past24h.untitledFeed"),
+            tags: feed.labels.tags || "",
             summaryHtmlSnippet: feed.labels.summary_html_snippet || "",
             link: feed.labels.link,
-            // Add other data if needed
         };
 
         selectedFeedStore.set(feedDetailData);
@@ -570,7 +570,6 @@
         };
     }
 
-    // --- 处理分享为图片的功能 ---
     async function handleShareAsImage() {
         if (!detailCardElement || copyStatus === "copying") {
             console.warn("Share cancelled: No element or already copying.");
@@ -1177,10 +1176,24 @@
                                         {selectedFeedDesktop.labels.title ||
                                             $_("past24h.untitledFeed")}
                                     </h2>
-                                    <!-- Container for Link and Share Button - ADD share-exclude class -->
+                                    <!-- Container for Tags, Link and Share Button -->
                                     <div
                                         class="flex items-center gap-4 mb-4 share-exclude"
                                     >
+                                        <!-- Inserted Tags Section -->
+                                        {#if selectedFeedDesktop.labels?.tags?.trim()}
+                                            <div
+                                                style="font-size:14px; color:#5f6368;"
+                                            >
+                                                <span
+                                                    style="display:inline-block; background-color:rgba(241, 243, 244, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.18); padding:4px 10px; border-radius:15px; margin-right:5px; color:#1a73e8; font-weight:500;"
+                                                >
+                                                    {selectedFeedDesktop.labels
+                                                        .tags}
+                                                </span>
+                                            </div>
+                                        {/if}
+
                                         {#if selectedFeedDesktop.labels.link}
                                             <a
                                                 href={selectedFeedDesktop.labels

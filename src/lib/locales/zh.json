@@ -95,7 +95,7 @@
         "advancedConfig": "高级配置"
     },
     "past24h": {
-        "fullArticle": "查看全文",
+        "fullArticle": "更多",
         "addSourceButton": "添加源",
         "searchPlaceholder": "搜索并生成总结...",
         "searchButton": "搜索",
@@ -122,7 +122,7 @@
         "selectFeedHint": "内容将在此处显示。",
         "noItemsInGroup": "此分组下暂无未读项目。",
         "noSummaryAvailable": "此项目无可用摘要。",
-        "shareButton": "一键分享",
+        "shareButton": "分享",
         "shareTooltip": "复制卡片为图片",
         "copyStatusCopying": "复制中...",
         "copyStatusCopied": "已复制!",
@@ -168,7 +168,7 @@
         "known": "我知道了"
     },
     "feedDetail": {
-        "backButton": "返回并标记为已读",
-        "visitSourceButton": "查看全文"
+        "backButton": "返回",
+        "visitSourceButton": "更多"
     }
 }

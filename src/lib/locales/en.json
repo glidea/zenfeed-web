@@ -95,7 +95,7 @@
         "advancedConfig": "Advanced Config"
     },
     "past24h": {
-        "fullArticle": "View Full Article",
+        "fullArticle": "More",
         "addSourceButton": "Add Source",
         "searchPlaceholder": "Search feeds & get summary...",
         "searchButton": "Search",
@@ -169,7 +169,7 @@
         "known": "I know"
     },
     "feedDetail": {
-        "backButton": "Go Back & Mark as Read",
-        "visitSourceButton": "Visit Source"
+        "backButton": "Back",
+        "visitSourceButton": "More"
     }
 }

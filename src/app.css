@@ -8,4 +8,8 @@
     filter: invert(1) hue-rotate(180deg);
     background-color: var(--b1);
   }
+
+  .embedded-html-content img {
+    filter: invert(1) hue-rotate(180deg);
+  }
 }

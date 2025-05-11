@@ -285,6 +285,7 @@
         // Prepare feed data
         const feedDetailData = {
             id: getFeedItemId(targetFeed),
+            tags: targetFeed.labels.tags || "",
             title: targetFeed.labels.title || $_("past24h.untitledFeed"), // Use translated fallback
             summaryHtmlSnippet: targetFeed.labels.summary_html_snippet || "",
             link: targetFeed.labels.link,
@@ -412,6 +413,20 @@
                         >
                             {feedData.title}
                         </h1>
+
+                        <!-- Inserted Tags Section for Mobile -->
+                        {#if feedData.tags && feedData.tags.trim() !== ""}
+                            <div
+                                class="mb-4"
+                                style="font-size:14px; color:#5f6368;"
+                            >
+                                <span
+                                    style="display:inline-block; background-color:rgba(241, 243, 244, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.18); padding:4px 10px; border-radius:15px; margin-right:5px; color:#1a73e8; font-weight:500;"
+                                >
+                                    {feedData.tags}
+                                </span>
+                            </div>
+                        {/if}
 
                         <div
                             bind:this={detailContentElement}

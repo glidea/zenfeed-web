@@ -1,10 +1,10 @@
 // Define shared types here
-export interface FeedLabel {
+export interface FeedLabels {
     [key: string]: string;
 }
 
 export interface FeedVO {
-    labels: FeedLabel;
+    labels: FeedLabels;
     time: string;
     id?: string; // Optional pre-calculated ID
     // Add other potential fields if necessary
