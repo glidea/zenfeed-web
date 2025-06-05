@@ -21,6 +21,7 @@
         readItemsStore,
         todayReadCountStore,
     } from "$lib/stores/readStateStore";
+    import { shadowRender } from "$lib/actions/shadowRender";
 
     const disableAddSource = env.PUBLIC_DISABLE_ADD_SOURCE === "true";
     const disableSearchTerm = env.PUBLIC_DISABLE_SEARCH_TERM === "true";
@@ -1334,16 +1335,10 @@
                                     <!-- Original Content Area -->
                                     <div
                                         bind:this={detailPanelContentElement}
-                                        class="embedded-html-content prose prose-sm max-w-none leading-relaxed overflow-y-auto max-h-[60vh]"
+                                        class="overflow-y-auto max-h-[60vh] embedded-html-content"
                                         on:wheel={preventScrollChaining}
-                                    >
-                                        {@html rightPanelHtml ||
-                                            '<p class="italic text-neutral-content/50">' +
-                                                $_(
-                                                    "past24h.noSummaryAvailable",
-                                                ) +
-                                                "</p>"}
-                                    </div>
+                                        use:shadowRender={rightPanelHtml}
+                                    ></div>
                                 </div>
                             </div>
                         {:else}

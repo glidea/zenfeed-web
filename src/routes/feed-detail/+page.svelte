@@ -10,6 +10,7 @@
     import { getFeedItemId, compareFeeds } from "$lib/utils/feedUtils"; // Import getFeedItemId and compareFeeds
     import { get } from "svelte/store"; // Import get function from svelte/store
     import type { FeedVO } from "$lib/types/feed"; // Import FeedVO type
+    import { shadowRender } from "$lib/actions/shadowRender";
 
     // Use the reactive $ prefix to subscribe to the store value
     let feedData = $selectedFeedStore;
@@ -430,11 +431,9 @@
 
                         <div
                             bind:this={detailContentElement}
-                            class="embedded-html-content prose prose-sm max-w-none leading-relaxed mb-6 text-base"
-                        >
-                            {@html feedData.summaryHtmlSnippet ||
-                                $_("feedDetail.noSummary")}
-                        </div>
+                            class="mb-6 text-base embedded-html-content"
+                            use:shadowRender={feedData.summaryHtmlSnippet}
+                        ></div>
 
                         <div
                             class="card-actions justify-end border-t border-base-300 pt-4 share-exclude"
