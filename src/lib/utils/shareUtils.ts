@@ -86,6 +86,13 @@ export async function shareElementAsImage(
                 // Remove max-height constraint and show all content
                 clonedContentElement.style.maxHeight = 'none';
                 clonedContentElement.style.overflow = 'visible';
+
+                // If the original contentElement has a shadowRoot,
+                // copy its content to the cloned element.
+                // This ensures html-to-image can see the content rendered by shadowRender.
+                if (contentElement.shadowRoot) {
+                    clonedContentElement.innerHTML = contentElement.shadowRoot.innerHTML;
+                }
             }
         }
 
