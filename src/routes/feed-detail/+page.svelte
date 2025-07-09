@@ -10,6 +10,7 @@
     import { get } from "svelte/store"; // Import get function from svelte/store
     import type { FeedVO } from "$lib/types/feed"; // Import FeedVO type
     import { shadowRender } from "$lib/actions/shadowRender";
+    import { audioPlayerStore } from "$lib/stores/audioPlayerStore";
 
     // Use the reactive $ prefix to subscribe to the store value
     let feedData = $selectedFeedStore;
@@ -430,6 +431,11 @@
                             {#if currentFeedIndex !== -1 && feedsList[currentFeedIndex]?.labels?.podcast_url}
                                 <button
                                     style="display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; background-color: rgba(241, 243, 244, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.18); padding: 4px 10px; border-radius: 15px; color: #1a73e8; font-weight: 500; font-size: 14px;"
+                                    on:click={() =>
+                                        audioPlayerStore.startPlaying(
+                                            feedsList[currentFeedIndex],
+                                            feedsList,
+                                        )}
                                 >
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"

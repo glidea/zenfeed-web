@@ -7,7 +7,6 @@
     import SettingsModal from "$lib/components/SettingsModal.svelte";
     import { _ } from "svelte-i18n"; // Import the translation function
     import { env } from "$env/dynamic/public"; // Import env
-    import AudioPlayer from "$lib/components/AudioPlayer.svelte";
 
     const disableNotifications = env.PUBLIC_DISABLE_NOTIFICATIONS === "true";
     const disableAdvancedConfig = env.PUBLIC_DISABLE_ADVANCED_CONFIG === "true";
@@ -191,5 +190,3 @@
 {#if showSettingsModal}
     <SettingsModal bind:show={showSettingsModal} />
 {/if}
-
-<AudioPlayer />
