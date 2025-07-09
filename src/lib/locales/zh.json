@@ -172,5 +172,6 @@
     "feedDetail": {
         "backButton": "返回",
         "visitSourceButton": "更多"
-    }
+    },
+    "playPodcastButton": "播客"
 }

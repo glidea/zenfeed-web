@@ -3,9 +3,7 @@
 	import "$lib/i18n"; // Initialize svelte-i18n
 	import { locale, waitLocale } from "svelte-i18n";
 	import { browser } from "$app/environment";
-	import type { LayoutData } from "./$types";
 
-	let { children } = $props();
 	let isLocaleLoading = $state(true); // State to track loading
 
 	// If server-side rendering, set the locale from the server

@@ -5,8 +5,7 @@
     import { shareElementAsImage } from "$lib/utils/shareUtils"; // Import share utility
     import { env } from "$env/dynamic/public"; // Import env
     import { readItemsStore } from "$lib/stores/readStateStore";
-    import { fly, fade } from "svelte/transition";
-    import { cubicOut, elasticOut } from "svelte/easing";
+    import { fade } from "svelte/transition";
     import { getFeedItemId, compareFeeds } from "$lib/utils/feedUtils"; // Import getFeedItemId and compareFeeds
     import { get } from "svelte/store"; // Import get function from svelte/store
     import type { FeedVO } from "$lib/types/feed"; // Import FeedVO type
@@ -409,25 +408,50 @@
                     class="card bg-base-200 border border-base-300 shadow-md rounded-lg overflow-hidden mb-12"
                 >
                     <div class="card-body p-6">
-                        <h1
-                            class="card-title text-2xl font-semibold mb-4 break-words"
-                        >
+                        <h1 class="text-2xl font-semibold mb-4 break-words">
                             {feedData.title}
                         </h1>
 
-                        <!-- Inserted Tags Section for Mobile -->
-                        {#if feedData.tags && feedData.tags.trim() !== ""}
-                            <div
-                                class="mb-4"
-                                style="font-size:14px; color:#5f6368;"
-                            >
-                                <span
-                                    style="display:inline-block; background-color:rgba(241, 243, 244, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.18); padding:4px 10px; border-radius:15px; margin-right:5px; color:#1a73e8; font-weight:500;"
-                                >
-                                    {feedData.tags}
-                                </span>
+                        <div class="flex justify-between items-center mb-4">
+                            <!-- Tags section -->
+                            <div>
+                                {#if feedData.tags && feedData.tags.trim() !== ""}
+                                    <div style="font-size:14px; color:#5f6368;">
+                                        <span
+                                            style="display:inline-block; background-color:rgba(241, 243, 244, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.18); padding:4px 10px; border-radius:15px; color:#1a73e8; font-weight:500;"
+                                        >
+                                            {feedData.tags}
+                                        </span>
+                                    </div>
+                                {/if}
                             </div>
-                        {/if}
+
+                            <!-- Podcast Play Button -->
+                            {#if currentFeedIndex !== -1 && feedsList[currentFeedIndex]?.labels?.podcast_url}
+                                <button
+                                    style="display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; background-color: rgba(241, 243, 244, 0.65); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.18); padding: 4px 10px; border-radius: 15px; color: #1a73e8; font-weight: 500; font-size: 14px;"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke-width="1.5"
+                                        stroke="currentColor"
+                                        class="w-4 h-4"
+                                        ><path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M19.114 10.652a.75.75 0 0 1 0 1.296l-6.091 3.516a.75.75 0 0 1-1.125-.648V7.784a.75.75 0 0 1 1.125-.648l6.091 3.516Z"
+                                        /><path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="M4.5 4.5v15A2.25 2.25 0 0 0 6.75 21.75h10.5A2.25 2.25 0 0 0 19.5 19.5v-15A2.25 2.25 0 0 0 17.25 2.25H6.75A2.25 2.25 0 0 0 4.5 4.5Z"
+                                        /></svg
+                                    >
+                                    <span>{$_("playPodcastButton")}</span>
+                                </button>
+                            {/if}
+                        </div>
 
                         <div
                             bind:this={detailContentElement}

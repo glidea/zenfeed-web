@@ -173,5 +173,6 @@
     "feedDetail": {
         "backButton": "Back",
         "visitSourceButton": "More"
-    }
+    },
+    "playPodcastButton": "Podcast"
 }

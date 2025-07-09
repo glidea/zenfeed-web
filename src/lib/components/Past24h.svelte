@@ -10,22 +10,20 @@
     import { selectedFeedStore, queryFeedsStore } from "$lib/stores/feedStore"; // Renamed import to avoid conflict
     import { get } from "svelte/store";
     import { shareElementAsImage } from "$lib/utils/shareUtils"; // NEW: Import the utility function
-    // --- NEW: Import utility functions ---
     import { getFeedItemId, compareFeeds } from "$lib/utils/feedUtils";
-    // import { calculateTodayReadCount } from "$lib/utils/dateUtils"; // REMOVED: Handled by readStateStore
-    import type { ReadItemsMap } from "$lib/utils/dateUtils"; // Import type if needed elsewhere
+    import type { ReadItemsMap } from "$lib/utils/dateUtils";
     import { preventScrollChaining } from "$lib/utils/domUtils";
-    import type { FeedVO } from "$lib/types/feed"; // Import shared types
-    // --- NEW: Import read state store ---
+    import type { FeedVO } from "$lib/types/feed";
     import {
         readItemsStore,
         todayReadCountStore,
     } from "$lib/stores/readStateStore";
     import { shadowRender } from "$lib/actions/shadowRender";
+    import { audioPlayerStore } from "$lib/stores/audioPlayerStore";
 
     const disableAddSource = env.PUBLIC_DISABLE_ADD_SOURCE === "true";
     const disableSearchTerm = env.PUBLIC_DISABLE_SEARCH_TERM === "true";
-    const siteUrl = env.PUBLIC_SITE_URL; // 新增：获取网站URL
+    const siteUrl = env.PUBLIC_SITE_URL;
 
     interface QueryResponse {
         summary: string;
@@ -1330,6 +1328,38 @@
                                                 {$_("past24h.copyStatusError")}
                                             {/if}
                                         </button>
+
+                                        <!-- Podcast Play Button -->
+                                        {#if selectedFeedDesktop.labels?.podcast_url}
+                                            <button
+                                                class="btn btn-xs btn-outline btn-accent rounded share-exclude"
+                                                on:click={() =>
+                                                    audioPlayerStore.startPlaying(
+                                                        selectedFeedDesktop!,
+                                                        feedsWithIds,
+                                                    )}
+                                                tabindex="-1"
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    fill="none"
+                                                    viewBox="0 0 24 24"
+                                                    stroke-width="1.5"
+                                                    stroke="currentColor"
+                                                    class="w-3 h-3 mr-1"
+                                                    ><path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        d="M19.114 10.652a.75.75 0 0 1 0 1.296l-6.091 3.516a.75.75 0 0 1-1.125-.648V7.784a.75.75 0 0 1 1.125-.648l6.091 3.516Z"
+                                                    /><path
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        d="M4.5 4.5v15A2.25 2.25 0 0 0 6.75 21.75h10.5A2.25 2.25 0 0 0 19.5 19.5v-15A2.25 2.25 0 0 0 17.25 2.25H6.75A2.25 2.25 0 0 0 4.5 4.5Z"
+                                                    /></svg
+                                                >
+                                                {$_("playPodcastButton")}
+                                            </button>
+                                        {/if}
                                     </div>
 
                                     <!-- Original Content Area -->
@@ -1398,7 +1428,6 @@
                             >
                                 {#each feeds as feed (getFeedItemId(feed))}
                                     <li
-                                        class="truncate"
                                         on:contextmenu={(e) =>
                                             handleMarkAsRead(e, feed)}
                                         out:shrinkFadeOut={{ duration: 500 }}
@@ -1448,7 +1477,7 @@
     {/if}
 
     <!-- Bottom Center Read Count: UPDATED to use store -->
-    {#if $todayReadCountStore > 0}
+    {#if $todayReadCountStore > 0 && !$audioPlayerStore.isPlayerVisible}
         <div
             class="fixed bottom-5 left-1/2 transform -translate-x-1/2 z-40 px-4 py-2 rounded-full bg-gradient-to-r from-blue-500 via-indigo-500 to-purple-500 text-white shadow-lg backdrop-blur-sm flex items-center space-x-2 text-sm font-bold transition-all duration-300 ease-out select-none"
             in:fly={{ y: 20, duration: 400, easing: cubicOut }}
