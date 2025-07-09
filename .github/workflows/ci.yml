@@ -22,7 +22,7 @@ jobs:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
       - name: Build and push Docker image (main)
-        if: github.ref_name == 'release'
+        if: github.event_name == 'release'
         run: make push
       - name: Build and push Docker image (dev)
         if: github.ref_name == 'dev'
