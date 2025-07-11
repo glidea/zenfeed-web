@@ -1336,7 +1336,9 @@
                                                 on:click={() =>
                                                     audioPlayerStore.startPlaying(
                                                         selectedFeedDesktop!,
-                                                        feedsWithIds,
+                                                        filteredGroupedFeeds[
+                                                            activeGroupName!
+                                                        ],
                                                     )}
                                                 tabindex="-1"
                                             >
