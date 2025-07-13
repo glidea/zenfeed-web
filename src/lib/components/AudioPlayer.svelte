@@ -2,6 +2,7 @@
     import { audioPlayerStore } from "$lib/stores/audioPlayerStore";
     import { onDestroy } from "svelte";
     import { slide } from "svelte/transition";
+    import { browser } from "$app/environment";
 
     let audio: HTMLAudioElement;
     let progress: HTMLProgressElement;
@@ -27,6 +28,54 @@
         } else {
             audio.pause();
         }
+    }
+
+    $: if (browser && "mediaSession" in navigator && $state.currentTrack) {
+        updateMediaSession();
+    }
+
+    function updateMediaSession() {
+        if (!browser || !("mediaSession" in navigator) || !$state.currentTrack)
+            return;
+
+        navigator.mediaSession.metadata = new MediaMetadata({
+            title: $state.currentTrack.title,
+            artist: "",
+            album: "",
+            artwork: [],
+        });
+
+        navigator.mediaSession.setActionHandler("play", () => {
+            state.togglePlayPause();
+        });
+
+        navigator.mediaSession.setActionHandler("pause", () => {
+            state.togglePlayPause();
+        });
+
+        navigator.mediaSession.setActionHandler("previoustrack", () => {
+            state.playPrevious();
+        });
+
+        navigator.mediaSession.setActionHandler("nexttrack", () => {
+            state.playNext();
+        });
+
+        navigator.mediaSession.setActionHandler("stop", () => {
+            state.closePlayer();
+        });
+
+        navigator.mediaSession.setActionHandler("seekto", (details) => {
+            if (audio && details.seekTime !== undefined) {
+                audio.currentTime = details.seekTime;
+            }
+        });
+    }
+
+    $: if (browser && "mediaSession" in navigator) {
+        navigator.mediaSession.playbackState = $state.isPlaying
+            ? "playing"
+            : "paused";
     }
 
     function formatTime(seconds: number): string {
