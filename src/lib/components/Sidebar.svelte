@@ -2,11 +2,13 @@
   import { onMount } from 'svelte';
   import { queryFeedsStore } from '$lib/stores/feedStore';
   import { readItemsStore } from '$lib/stores/readStateStore';
+  import { starredArticlesStore } from '$lib/stores/articleActionsStore';
   import { groupFeedsByLabel } from '$lib/utils/feedUtils';
   
   export let activeItem = 'inbox';
   export let selectedGroup: string | null = null;
   export let onGroupSelect: (groupName: string) => void = () => {};
+  export let onStarredFilterToggle: (enabled: boolean) => void = () => {};
 
   // Placeholder data for sidebar navigation
   const navItems = [
@@ -33,6 +35,27 @@
     });
     return count;
   })();
+  
+  // Handle navigation item click
+  function handleNavClick(itemId: string) {
+    activeItem = itemId;
+    selectedGroup = null;
+    
+    // Toggle starred filter
+    if (itemId === 'starred') {
+      onStarredFilterToggle(true);
+    } else {
+      onStarredFilterToggle(false);
+    }
+  }
+  
+  // Handle group click - should reset starred filter
+  function handleGroupClick(groupName: string) {
+    selectedGroup = groupName;
+    activeItem = ''; // Deselect nav items
+    onGroupSelect(groupName);
+    onStarredFilterToggle(false); // Turn off starred filter
+  }
 </script>
 
 <aside class="w-64 h-full bg-background-secondary/80 backdrop-blur-xl border-r border-border-subtle flex flex-col pt-6 pb-4 relative overflow-hidden">
@@ -74,10 +97,7 @@
         {activeItem === item.id 
           ? 'text-accent-emerald bg-accent-emerald/10 shadow-[0_0_15px_-3px_rgba(16,163,127,0.3)]' 
           : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}"
-        on:click={() => {
-          activeItem = item.id;
-          selectedGroup = null;
-        }}
+        onclick={() => handleNavClick(item.id)}
       >
         <!-- Active indicator line - green -->
         {#if activeItem === item.id}
@@ -106,10 +126,7 @@
           {selectedGroup === groupName
             ? 'text-accent-mint bg-accent-mint/10 shadow-[0_0_10px_-4px_rgba(110,231,183,0.3)]'
             : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}"
-          on:click={() => {
-            selectedGroup = groupName;
-            onGroupSelect(groupName);
-          }}
+          onclick={() => handleGroupClick(groupName)}
         >
           <span class="mr-3 flex-shrink-0 w-4 flex justify-center text-xs opacity-60">#</span>
           <span class="truncate">{groupName}</span>

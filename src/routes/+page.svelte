@@ -12,9 +12,24 @@
   let isLoading = false;
   let error: string | null = null;
   
+  // Resizable columns state
+  let sidebarWidth = 256; // 16rem = 256px
+  let articleListWidth = 384; // 24rem = 384px
+  let isDraggingSidebar = false;
+  let isDraggingArticleList = false;
+  
+  // Reference to ArticleList component for filter toggle
+  let articleListComponent: any;
+  
   function handleGroupSelect(groupName: string) {
     selectedGroup = groupName;
     activeItem = ''; // Deselect nav items
+  }
+  
+  function handleStarredFilterToggle(enabled: boolean) {
+    if (articleListComponent && articleListComponent.toggleStarredFilter) {
+      articleListComponent.toggleStarredFilter(enabled);
+    }
   }
   
   async function fetchFeeds() {
@@ -55,7 +70,38 @@
   onMount(() => {
     fetchFeeds();
   });
+  
+  // Resizable handlers
+  function startDraggingSidebar(e: MouseEvent) {
+    e.preventDefault();
+    isDraggingSidebar = true;
+  }
+  
+  function startDraggingArticleList(e: MouseEvent) {
+    e.preventDefault();
+    isDraggingArticleList = true;
+  }
+  
+  function handleMouseMove(e: MouseEvent) {
+    if (isDraggingSidebar) {
+      const newWidth = Math.max(200, Math.min(400, e.clientX));
+      sidebarWidth = newWidth;
+    } else if (isDraggingArticleList) {
+      const newWidth = Math.max(300, Math.min(600, e.clientX - sidebarWidth));
+      articleListWidth = newWidth;
+    }
+  }
+  
+  function stopDragging() {
+    isDraggingSidebar = false;
+    isDraggingArticleList = false;
+  }
 </script>
+
+<svelte:window 
+  onmousemove={handleMouseMove}
+  onmouseup={stopDragging}
+/>
 
 {#if isLoading}
   <!-- Loading State -->
@@ -87,12 +133,45 @@
     </div>
   </div>
 {:else}
-  <!-- Main Content -->
-  <Sidebar 
-    bind:activeItem 
-    bind:selectedGroup
-    onGroupSelect={handleGroupSelect}
-  />
-  <ArticleList {selectedGroup} />
-  <ArticleReader />
+  <!-- Main Content with Resizable Columns -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Sidebar -->
+    <div style="width: {sidebarWidth}px; flex-shrink: 0;">
+      <Sidebar 
+        bind:activeItem 
+        bind:selectedGroup
+        onGroupSelect={handleGroupSelect}
+        onStarredFilterToggle={handleStarredFilterToggle}
+      />
+    </div>
+    
+    <!-- Sidebar Resizer -->
+    <div 
+      class="w-[1px] bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group"
+      onmousedown={startDraggingSidebar}
+    >
+      <div class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-accent-emerald/10"></div>
+    </div>
+    
+    <!-- Article List -->
+    <div style="width: {articleListWidth}px; flex-shrink: 0;">
+      <ArticleList 
+        bind:this={articleListComponent}
+        {selectedGroup} 
+      />
+    </div>
+    
+    <!-- Article List Resizer -->
+    <div 
+      class="w-[1px] bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group"
+      onmousedown={startDraggingArticleList}
+    >
+      <div class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-accent-emerald/10"></div>
+    </div>
+    
+    <!-- Article Reader (flexible width) -->
+    <div class="flex-1 overflow-hidden">
+      <ArticleReader />
+    </div>
+  </div>
 {/if}

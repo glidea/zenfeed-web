@@ -1,27 +1,79 @@
 <script lang="ts">
   import { selectedFeedStore } from '$lib/stores/feedStore';
-  import { isReadStore, readItemsStore } from '$lib/stores/readStateStore';
-  import dayjs from 'dayjs';
-  import { afterUpdate } from 'svelte';
-
-  // Auto mark as read when opened
-  afterUpdate(() => {
-    if ($selectedFeedStore && $selectedFeedStore.id) {
-       readItemsStore.markRead($selectedFeedStore.id);
-    }
-  });
-
-  // Helper to safely get content
-  $: content = $selectedFeedStore?.summaryHtmlSnippet || '';
-  $: title = $selectedFeedStore?.title || '';
-  $: link = $selectedFeedStore?.link || '';
-  $: tags = $selectedFeedStore?.tags || '';
+  import { readItemsStore } from '$lib/stores/readStateStore';
+  import { starredArticlesStore } from '$lib/stores/articleActionsStore';
+  import { onMount } from 'svelte';
   
-  // Try to get the date from readItemsStore (when it was marked as read) or use current time
+  // Reactive data from store
+  $: title = $selectedFeedStore?.title || '';
+  $: content = $selectedFeedStore?.summaryHtmlSnippet || '';
+  $: link = $selectedFeedStore?.link || '';
+  $: currentArticleId = $selectedFeedStore?.id || '';
+  
+  // Get date from readItemsStore or use current time
   let date = '';
   $: {
-    const readTime = $selectedFeedStore?.id ? $readItemsStore.get($selectedFeedStore.id) : null;
-    date = readTime ? dayjs(readTime).format('MMMM D, YYYY h:mm A') : dayjs().format('MMMM D, YYYY h:mm A');
+    if ($selectedFeedStore?.id) {
+      const itemId = $selectedFeedStore.id;
+      const timestamp = $readItemsStore.get(itemId);
+      if (timestamp) {
+        date = new Date(timestamp).toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+      } else {
+        date = new Date().toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric' });
+      }
+    }
+  }
+  
+  // Star (favorite) state - now from store
+  $: isStarred = currentArticleId ? $starredArticlesStore.has(currentArticleId) : false;
+  
+  // Focus mode state
+  let focusMode = false;
+  let focusedParagraph: HTMLElement | null = null;
+  
+  function toggleStar() {
+    if (currentArticleId) {
+      starredArticlesStore.toggle(currentArticleId);
+    }
+  }
+  
+  function toggleFocusMode() {
+    focusMode = !focusMode;
+    if (!focusMode) {
+      focusedParagraph = null;
+      // Remove all focus classes
+      document.querySelectorAll('.focused-paragraph, .dimmed-paragraph').forEach(el => {
+        el.classList.remove('focused-paragraph', 'dimmed-paragraph');
+      });
+    }
+  }
+  
+  function handleParagraphClick(e: MouseEvent) {
+    if (!focusMode) return;
+    
+    const target = e.target as HTMLElement;
+    const paragraph = target.closest('p, h1, h2, h3, h4, h5, h6, li, blockquote');
+    
+    if (paragraph && paragraph instanceof HTMLElement) {
+      // Remove previous focus
+      document.querySelectorAll('.focused-paragraph, .dimmed-paragraph').forEach(el => {
+        el.classList.remove('focused-paragraph', 'dimmed-paragraph');
+      });
+      
+      // Add focus to clicked paragraph
+      paragraph.classList.add('focused-paragraph');
+      focusedParagraph = paragraph;
+      
+      // Dim all other paragraphs
+      const article = paragraph.closest('article');
+      if (article) {
+        article.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote').forEach(el => {
+          if (el !== paragraph && el instanceof HTMLElement) {
+            el.classList.add('dimmed-paragraph');
+          }
+        });
+      }
+    }
   }
 </script>
 
@@ -33,29 +85,56 @@
       <!-- Toolbar -->
       <div class="h-14 px-8 border-b border-white/5 flex items-center justify-between sticky top-0 bg-background-primary/80 backdrop-blur-xl z-20">
          <div class="flex items-center space-x-4">
-             <button class="text-text-secondary hover:text-accent-emerald transition-colors hover:scale-110 active:scale-95 glow-hover p-1 rounded-lg">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+             <!-- Star/Favorite button -->
+             <button 
+               onclick={toggleStar}
+               class="text-text-secondary hover:text-accent-mint transition-colors hover:scale-110 active:scale-95 p-1 rounded-lg {isStarred ? 'text-accent-emerald' : ''}"
+               title={isStarred ? 'Unstar' : 'Star'}
+               aria-label={isStarred ? 'Remove from favorites' : 'Add to favorites'}
+             >
+                {#if isStarred}
+                  <svg class="w-5 h-5" fill="currentColor" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                {:else}
+                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path></svg>
+                {/if}
              </button>
-             <button class="text-text-secondary hover:text-accent-mint transition-colors hover:scale-110 active:scale-95 glow-hover p-1 rounded-lg">
+             <!-- Share button -->
+             <button class="text-text-secondary hover:text-accent-mint transition-colors hover:scale-110 active:scale-95 glow-hover p-1 rounded-lg" aria-label="Share article">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
              </button>
          </div>
          <div class="flex items-center space-x-4">
-             <button class="text-text-secondary hover:text-text-primary transition-colors hover:bg-white/5 p-1.5 rounded-md">
+             <!-- Focus Mode button - moon icon -->
+             <button 
+               onclick={toggleFocusMode}
+               class="text-text-secondary hover:text-accent-emerald transition-colors hover:bg-white/5 p-1.5 rounded-md {focusMode ? 'bg-accent-emerald/10 text-accent-emerald' : ''}"
+               title="Focus Mode"
+               aria-label="Toggle focus mode"
+             >
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+                </svg>
+             </button>
+             <button class="text-text-secondary hover:text-text-primary transition-colors hover:bg-white/5 p-1.5 rounded-md" aria-label="View code">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
              </button>
-             <button class="text-text-secondary hover:text-text-primary transition-colors hover:bg-white/5 p-1.5 rounded-md">
+             <button class="text-text-secondary hover:text-text-primary transition-colors hover:bg-white/5 p-1.5 rounded-md" aria-label="Fullscreen">
                  <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"></path></svg>
              </button>
          </div>
       </div>
 
       <!-- Article Content -->
-      <div class="flex-1 overflow-y-auto px-12 py-10 scroller relative z-10">
+      <div 
+        class="flex-1 overflow-y-auto px-12 py-10 scroller relative z-10" 
+        onclick={focusMode ? handleParagraphClick : undefined}
+        role={focusMode ? "button" : undefined}
+        tabindex={focusMode ? 0 : undefined}
+      >
          <div class="max-w-3xl mx-auto animation-fade-in-up">
             <!-- Header -->
             <header class="mb-10 border-b border-white/5 pb-8">
-               <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-gray-400 mb-6 leading-tight tracking-tight shadow-md">
+               <h1 class="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-gray-400 mb-6 leading-tight tracking-tight">
                   {title}
                </h1>
                <div class="flex items-center text-sm font-medium text-text-secondary space-x-4">
@@ -72,14 +151,18 @@
             </header>
 
             <!-- Body -->
-            <article class="prose prose-invert prose-lg max-w-none 
-               prose-headings:text-text-primary prose-headings:font-bold prose-headings:tracking-tight
-               prose-p:text-text-secondary prose-p:leading-relaxed prose-p:font-light
-               prose-a:text-accent-emerald prose-a:no-underline hover:prose-a:text-accent-mint hover:prose-a:underline prose-a:transition-colors
-               prose-strong:text-white prose-strong:font-semibold
-               prose-img:rounded-2xl prose-img:shadow-2xl prose-img:border prose-img:border-white/5
-               prose-blockquote:border-l-accent-emerald prose-blockquote:bg-white/5 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic
-               prose-code:text-accent-mint prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none font-sans">
+            <article class="prose prose-invert prose-lg max-w-none article-content
+               prose-headings:text-white prose-headings:font-bold prose-headings:tracking-tight prose-headings:leading-tight
+               prose-p:text-white/90 prose-p:leading-[1.8] prose-p:font-light prose-p:text-[17px] prose-p:my-5
+               prose-a:text-accent-emerald prose-a:no-underline hover:prose-a:text-accent-mint hover:prose-a:underline prose-a:transition-colors prose-a:font-medium
+               prose-strong:text-white prose-strong:font-semibold prose-strong:text-[18px]
+               prose-em:text-accent-mint prose-em:not-italic prose-em:font-medium
+               prose-img:rounded-2xl prose-img:shadow-2xl prose-img:border prose-img:border-white/5 prose-img:my-8
+               prose-blockquote:border-l-accent-emerald prose-blockquote:bg-white/5 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-blockquote:not-italic prose-blockquote:my-6
+               prose-code:text-accent-mint prose-code:bg-white/5 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-code:text-sm
+               prose-pre:bg-background-tertiary prose-pre:border prose-pre:border-white/10 prose-pre:my-6
+               prose-ul:my-5 prose-li:text-white/90 prose-li:my-2 prose-li:leading-relaxed
+               font-sans">
                {@html content}
             </article>
             
@@ -128,5 +211,67 @@
  @keyframes fade-in-up {
     from { opacity: 0; transform: translateY(20px); filter: blur(5px); }
     to { opacity: 1; transform: translateY(0); filter: blur(0); }
+ }
+ 
+ /* Focus Mode Styles */  
+ :global(.focused-paragraph) {
+    position: relative;
+    opacity: 1 !important;
+    transition: opacity 0.3s ease, background-color 0.3s ease, transform 0.2s ease;
+    background-color: rgba(16, 163, 127, 0.08);
+    padding: 1.5rem;
+    margin: -1rem;
+    border-radius: 12px;
+    border-left: 4px solid var(--accent-emerald);
+    box-shadow: 0 0 0 1px rgba(16, 163, 127, 0.3), 
+                0 0 30px -5px rgba(16, 163, 127, 0.2);
+    cursor: pointer;
+    transform: scale(1.01);
+ }
+ 
+ /* Make focused paragraph text bright white */
+ :global(.focused-paragraph),
+ :global(.focused-paragraph *) {
+    color: #ffffff !important;
+    opacity: 1 !important;
+ }
+ 
+ /* Ensure strong and em tags are also bright in focus mode */
+ :global(.focused-paragraph strong) {
+    color: #ffffff !important;
+    font-weight: 700;
+ }
+ 
+ :global(.focused-paragraph em) {
+    color: var(--accent-mint) !important;
+ }
+ 
+ :global(.focused-paragraph code) {
+    color: var(--accent-mint) !important;
+    background-color: rgba(16, 163, 127, 0.15) !important;
+ }
+ 
+ /* Dimmed paragraphs - MORE dimmed */
+ :global(.dimmed-paragraph) {
+    opacity: 0.15 !important;
+    filter: blur(0.5px);
+    transition: opacity 0.3s ease, filter 0.3s ease;
+    cursor: pointer;
+ }
+ 
+ :global(.dimmed-paragraph:hover) {
+    opacity: 0.4 !important;
+    filter: blur(0px);
+ }
+ 
+ /* Enhanced text styles */
+ :global(.article-content p) {
+    letter-spacing: 0.01em;
+ }
+ 
+ :global(.article-content strong) {
+    background: linear-gradient(120deg, rgba(16, 163, 127, 0.1) 0%, rgba(110, 231, 183, 0.05) 100%);
+    padding: 0 0.25em;
+    border-radius: 2px;
  }
 </style>
