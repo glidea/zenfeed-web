@@ -58,104 +58,129 @@
   }
 </script>
 
-<aside class="w-64 h-full bg-background-secondary/80 backdrop-blur-xl border-r border-border-subtle flex flex-col pt-6 pb-4 relative overflow-hidden">
-  <!-- Subtle background glow - now green -->
-  <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-accent-emerald/5 to-transparent pointer-events-none"></div>
+<aside class="w-64 h-full bg-background-primary border-r border-ghost flex flex-col pt-6 pb-4 relative overflow-hidden with-noise">
+  <!-- Ambient glow background -->
+  <div class="absolute top-0 left-0 w-full h-full bg-gradient-emerald pointer-events-none"></div>
+  
+  <!-- Glass overlay effect -->
+  <div class="absolute inset-0 backdrop-blur-sm opacity-20 pointer-events-none"></div>
 
-  <!-- Header -->
+  <!-- Header with enhanced styling -->
   <div class="px-6 mb-6 flex items-center justify-between relative z-10">
-    <div class="text-xl font-bold tracking-tight text-gradient-green">
+    <div class="text-xl font-bold tracking-tight text-gradient-emerald">
       ZenFeed
     </div>
     <a 
       href="/settings" 
-      class="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-accent-emerald hover:bg-accent-emerald/10 transition-all duration-300 glow-hover"
+      class="w-8 h-8 flex items-center justify-center rounded-md text-text-secondary hover:text-accent-mint 
+             transition-linear hover:bg-accent-emerald/15 hover:shadow-glow-sm border border-ghost"
       title="Add Source"
       aria-label="Add new feed source"
     >
-      <!-- Simple plus icon -->
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
     </a>
   </div>
 
-  <!-- Today's Stats Card -->
+  <!-- Today's Stats Card - Enhanced with card-elevated -->
   {#if todayReadCount > 0}
-    <div class="mx-3 mb-6 p-3 bg-accent-emerald/5 border border-accent-emerald/20 rounded-lg relative z-10 animate-fade-in">
+    <div class="mx-3 mb-6 p-4 card-elevated relative z-10 animate-slide-in-right border-emerald-900/30">
       <div class="flex items-center justify-between">
         <div>
-          <div class="text-xs text-text-secondary mb-0.5">Today's Progress</div>
-          <div class="text-2xl font-bold text-accent-emerald">{todayReadCount}</div>
-          <div class="text-[10px] text-text-muted">article{todayReadCount === 1 ? '' : 's'} read</div>
+          <div class="text-xs text-text-secondary font-medium mb-1 uppercase tracking-widest opacity-75">
+            📊 Today's Progress
+          </div>
+          <div class="text-3xl font-bold text-gradient-emerald">{todayReadCount}</div>
+          <div class="text-xs text-text-muted mt-1">
+            article{todayReadCount === 1 ? '' : 's'} read
+          </div>
         </div>
-        <div class="w-12 h-12 rounded-full bg-accent-emerald/10 flex items-center justify-center">
-          <svg class="w-6 h-6 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <div class="flex-shrink-0">
+          <div class="w-14 h-14 rounded-full bg-gradient-to-br from-accent-emerald/20 to-accent-mint/10 
+                        flex items-center justify-center border border-accent-mint/20 shadow-glow-sm">
+            <svg class="w-7 h-7 text-accent-mint" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+          </div>
         </div>
       </div>
     </div>
   {/if}
 
-  <!-- Main Nav -->
-  <nav class="flex-1 px-3 space-y-1 overflow-y-auto relative z-10">
+  <!-- Main Navigation -->
+  <nav class="flex-1 px-3 space-y-1 overflow-y-auto relative z-10 scroller">
     {#each navItems as item}
       <button 
-        class="w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-lg transition-all duration-300 group relative
-        {activeItem === item.id 
-          ? 'text-accent-emerald bg-accent-emerald/10 shadow-[0_0_15px_-3px_rgba(16,163,127,0.3)]' 
-          : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}"
+        class="w-full flex items-center px-3 py-2.5 text-sm font-medium rounded-md transition-linear 
+                group relative indicator-bar {activeItem === item.id ? 'active' : ''}
+                {activeItem === item.id 
+                  ? 'text-accent-mint bg-accent-emerald/12 shadow-glow-sm border border-accent-mint/30' 
+                  : 'text-text-secondary hover:text-text-primary hover:bg-accent-emerald/8 border border-ghost hover:border-accent-emerald/20'}"
         onclick={() => handleNavClick(item.id)}
+        aria-current={activeItem === item.id ? 'page' : undefined}
       >
-        <!-- Active indicator line - green -->
-        {#if activeItem === item.id}
-          <div class="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-5 bg-accent-emerald rounded-r shadow-[0_0_8px_var(--accent-emerald)]"></div>
-        {/if}
-
-        <svg class="mr-3 ml-1 flex-shrink-0 h-5 w-5 transition-colors {activeItem === item.id ? 'text-accent-emerald' : 'text-text-muted group-hover:text-text-primary'}" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg class="mr-3 ml-0 flex-shrink-0 h-5 w-5 transition-colors {activeItem === item.id ? 'text-accent-mint' : 'text-text-muted group-hover:text-accent-emerald'}" 
+             fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d={item.icon}></path>
         </svg>
-        {item.label}
+        <span>{item.label}</span>
       </button>
     {/each}
 
-    <!-- Divider -->
-    <div class="pt-6 pb-2 px-3">
-      <h3 class="text-[10px] font-bold text-text-muted uppercase tracking-widest opacity-70">
-        Feeds
+    <!-- Feed Groups Separator -->
+    <div class="pt-4 pb-2 px-3 mt-3 border-t border-ghost">
+      <h3 class="text-xs font-semibold text-text-muted uppercase tracking-widest opacity-70 flex items-center gap-2">
+        <span>📚 Feeds</span>
+        {#if groups.length > 0}
+          <span class="ml-auto text-[10px] badge-emerald">{groups.length}</span>
+        {/if}
       </h3>
     </div>
     
-    <!-- Dynamic Groups / Feeds from API -->
+    <!-- Dynamic Feed Groups -->
     {#if groups.length > 0}
-      {#each groups as groupName}
+      {#each groups as groupName (groupName)}
         <button 
-          class="w-full flex items-center px-3 py-2 text-sm font-medium rounded-lg transition-all
-          {selectedGroup === groupName
-            ? 'text-accent-mint bg-accent-mint/10 shadow-[0_0_10px_-4px_rgba(110,231,183,0.3)]'
-            : 'text-text-secondary hover:text-text-primary hover:bg-white/5'}"
+          class="w-full flex items-center pl-6 pr-3 py-2 text-sm font-medium rounded-md transition-linear
+                  group relative indicator-bar {selectedGroup === groupName ? 'active' : ''}
+                  {selectedGroup === groupName
+                    ? 'text-accent-mint bg-accent-emerald/12 shadow-glow-sm border border-accent-mint/30' 
+                    : 'text-text-secondary hover:text-text-primary hover:bg-accent-emerald/8 border border-ghost hover:border-accent-emerald/20'}"
           onclick={() => handleGroupClick(groupName)}
+          aria-current={selectedGroup === groupName ? 'page' : undefined}
         >
-          <span class="mr-3 flex-shrink-0 w-4 flex justify-center text-xs opacity-60">#</span>
-          <span class="truncate">{groupName}</span>
+          <svg class="mr-3 flex-shrink-0 h-4 w-4 transition-colors {selectedGroup === groupName ? 'text-accent-mint' : 'text-text-muted group-hover:text-accent-emerald'}" 
+               fill="currentColor" viewBox="0 0 24 24">
+            <path d="M7 7h.01M7 3h5c.55 0 1 .45 1 1v8c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1V4c0-.55.45-1 1-1zm0 8h10c.55 0 1 .45 1 1v6c0 .55-.45 1-1 1H7c-.55 0-1-.45-1-1v-6c0-.55.45-1 1-1z"></path>
+          </svg>
+          <span class="truncate flex-1">{groupName}</span>
         </button>
       {/each}
     {:else}
-      <div class="px-3 py-2 text-xs text-text-muted italic opacity-50">
-        No feeds available
+      <div class="px-3 py-3 text-xs text-text-muted italic opacity-60 text-center">
+        <p>No feeds added yet</p>
+        <p class="text-[11px] mt-1 opacity-70">Visit settings to add sources</p>
       </div>
     {/if}
   </nav>
   
-  <!-- Footer / User -->
-  <div class="px-4 py-4 border-t border-border-subtle relative z-10 bg-background-secondary/50">
-    <div class="flex items-center p-2 rounded-xl hover:bg-white/5 transition-colors cursor-pointer group">
-      <div class="h-9 w-9 rounded-full bg-gradient-to-br from-accent-emerald to-accent-mint p-[1px]">
-        <div class="bg-background-secondary w-full h-full rounded-full flex items-center justify-center text-xs font-bold text-white relative overflow-hidden">
-             <!-- Avatar Image or Text -->
-             A
+  <!-- Footer - Glassmorphic User Card -->
+  <div class="px-4 py-4 border-t border-ghost relative z-10">
+    <div class="flex items-center p-2.5 rounded-lg glassmorphic group hover:border-accent-mint/50 cursor-pointer">
+      <!-- Avatar -->
+      <div class="h-10 w-10 rounded-full bg-gradient-to-br from-accent-mint to-accent-emerald p-[2px] flex-shrink-0">
+        <div class="bg-background-primary w-full h-full rounded-full flex items-center justify-center 
+                    text-xs font-bold text-accent-mint group-hover:text-accent-lime transition-colors">
+          A
         </div>
       </div>
-      <div class="ml-3">
-        <p class="text-sm font-medium text-text-primary group-hover:text-accent-emerald transition-colors">Admin</p>
-        <p class="text-xs text-text-secondary">Pro Plan</p>
+      <!-- User Info -->
+      <div class="ml-3 flex-1 min-w-0">
+        <p class="text-sm font-semibold text-text-primary group-hover:text-accent-mint transition-colors truncate">
+          Admin
+        </p>
+        <p class="text-xs text-text-muted group-hover:text-text-secondary transition-colors truncate">
+          Pro Plan
+        </p>
       </div>
     </div>
   </div>

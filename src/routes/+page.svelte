@@ -71,28 +71,56 @@
     fetchFeeds();
   });
   
-  // Resizable handlers
+  // Resizable handlers - synchronized dragging with fixed gap
+  let dragStartX = 0;
+  let dragStartSidebarWidth = 0;
+  let dragStartArticleListWidth = 0;
+  
   function startDraggingSidebar(e: MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     isDraggingSidebar = true;
+    dragStartX = e.clientX;
+    dragStartSidebarWidth = sidebarWidth;
+    dragStartArticleListWidth = articleListWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
   }
   
   function startDraggingArticleList(e: MouseEvent) {
     e.preventDefault();
+    e.stopPropagation();
     isDraggingArticleList = true;
+    dragStartX = e.clientX;
+    dragStartSidebarWidth = sidebarWidth;
+    dragStartArticleListWidth = articleListWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
   }
   
   function handleMouseMove(e: MouseEvent) {
     if (isDraggingSidebar) {
-      const newWidth = Math.max(200, Math.min(400, e.clientX));
-      sidebarWidth = newWidth;
+      const delta = e.clientX - dragStartX;
+      // 同时调整两个宽度，保持间距不变
+      const newSidebarWidth = Math.max(200, Math.min(500, dragStartSidebarWidth + delta));
+      const actualDelta = newSidebarWidth - dragStartSidebarWidth;
+      sidebarWidth = newSidebarWidth;
+      articleListWidth = dragStartArticleListWidth + actualDelta;
     } else if (isDraggingArticleList) {
-      const newWidth = Math.max(300, Math.min(600, e.clientX - sidebarWidth));
-      articleListWidth = newWidth;
+      const delta = e.clientX - dragStartX;
+      // 同时调整两个宽度，保持间距不变
+      const newArticleListWidth = Math.max(300, Math.min(600, dragStartArticleListWidth + delta));
+      const actualDelta = newArticleListWidth - dragStartArticleListWidth;
+      articleListWidth = newArticleListWidth;
+      sidebarWidth = dragStartSidebarWidth + actualDelta;
     }
   }
   
   function stopDragging() {
+    if (isDraggingSidebar || isDraggingArticleList) {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+    }
     isDraggingSidebar = false;
     isDraggingArticleList = false;
   }
@@ -147,10 +175,16 @@
     
     <!-- Sidebar Resizer -->
     <div 
-      class="w-[1px] bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group"
+      class="w-1 bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group flex-shrink-0"
       onmousedown={startDraggingSidebar}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
     >
-      <div class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-accent-emerald/10"></div>
+      <!-- Extended hit area for easier dragging -->
+      <div class="absolute inset-y-0 -left-2 -right-2"></div>
+      <!-- Visual indicator on hover -->
+      <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-accent-emerald opacity-0 group-hover:opacity-100 transition-opacity"></div>
     </div>
     
     <!-- Article List -->
@@ -163,10 +197,16 @@
     
     <!-- Article List Resizer -->
     <div 
-      class="w-[1px] bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group"
+      class="w-1 bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group flex-shrink-0"
       onmousedown={startDraggingArticleList}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize article list"
     >
-      <div class="absolute inset-y-0 -left-1 -right-1 group-hover:bg-accent-emerald/10"></div>
+      <!-- Extended hit area for easier dragging -->
+      <div class="absolute inset-y-0 -left-2 -right-2"></div>
+      <!-- Visual indicator on hover -->
+      <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-accent-emerald opacity-0 group-hover:opacity-100 transition-opacity"></div>
     </div>
     
     <!-- Article Reader (flexible width) -->
