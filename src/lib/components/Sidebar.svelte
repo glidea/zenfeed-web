@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { queryFeedsStore } from '$lib/stores/feedStore';
+  import { readItemsStore } from '$lib/stores/readStateStore';
   import { groupFeedsByLabel } from '$lib/utils/feedUtils';
   
   export let activeItem = 'inbox';
@@ -17,6 +18,21 @@
   $: groups = $queryFeedsStore?.feeds 
     ? Object.keys(groupFeedsByLabel($queryFeedsStore.feeds, 'source')).sort()
     : [];
+  
+  // Calculate today's read count
+  $: todayReadCount = (() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const todayTimestamp = today.getTime();
+    
+    let count = 0;
+    $readItemsStore.forEach((timestamp) => {
+      if (timestamp >= todayTimestamp) {
+        count++;
+      }
+    });
+    return count;
+  })();
 </script>
 
 <aside class="w-64 h-full bg-background-secondary/80 backdrop-blur-xl border-r border-border-subtle flex flex-col pt-6 pb-4 relative overflow-hidden">
@@ -24,7 +40,7 @@
   <div class="absolute top-0 left-0 w-full h-full bg-gradient-to-b from-accent-emerald/5 to-transparent pointer-events-none"></div>
 
   <!-- Header -->
-  <div class="px-6 mb-8 flex items-center justify-between relative z-10">
+  <div class="px-6 mb-6 flex items-center justify-between relative z-10">
     <div class="text-xl font-bold tracking-tight text-gradient-green">
       ZenFeed
     </div>
@@ -33,6 +49,22 @@
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
     </button>
   </div>
+
+  <!-- Today's Stats Card -->
+  {#if todayReadCount > 0}
+    <div class="mx-3 mb-6 p-3 bg-accent-emerald/5 border border-accent-emerald/20 rounded-lg relative z-10 animate-fade-in">
+      <div class="flex items-center justify-between">
+        <div>
+          <div class="text-xs text-text-secondary mb-0.5">Today's Progress</div>
+          <div class="text-2xl font-bold text-accent-emerald">{todayReadCount}</div>
+          <div class="text-[10px] text-text-muted">article{todayReadCount === 1 ? '' : 's'} read</div>
+        </div>
+        <div class="w-12 h-12 rounded-full bg-accent-emerald/10 flex items-center justify-center">
+          <svg class="w-6 h-6 text-accent-emerald" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+      </div>
+    </div>
+  {/if}
 
   <!-- Main Nav -->
   <nav class="flex-1 px-3 space-y-1 overflow-y-auto relative z-10">
