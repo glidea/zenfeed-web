@@ -67,10 +67,15 @@
     <div class="text-xl font-bold tracking-tight text-gradient-green">
       ZenFeed
     </div>
-    <button class="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-accent-emerald hover:bg-accent-emerald/10 transition-all duration-300 glow-hover">
+    <a 
+      href="/settings" 
+      class="w-8 h-8 flex items-center justify-center rounded-lg text-text-secondary hover:text-accent-emerald hover:bg-accent-emerald/10 transition-all duration-300 glow-hover"
+      title="Add Source"
+      aria-label="Add new feed source"
+    >
       <!-- Simple plus icon -->
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-    </button>
+    </a>
   </div>
 
   <!-- Today's Stats Card -->
