@@ -1,15 +1,66 @@
 @import "tailwindcss";
-@plugin "daisyui" {
-  themes: winter --default, night --prefersdark;
+
+:root {
+  /* Linear Style Dark Theme - Core Colors */
+  --bg-primary: #08080a; /* Almost black */
+  --bg-secondary: #121214; /* Dark grey for sidebars/cards */
+  --bg-tertiary: #1c1c1f; /* Lighter grey for hovers */
+
+  --text-primary: #ededef; /* Main text, not quite pure white */
+  --text-secondary: #9da2ae; /* Secondary text */
+  --text-muted: #575c66; /* Muted/Disabled */
+
+  --border-subtle: #222226;
+  --border-highlight: #36363a;
+
+  --accent-primary: #5e6ad2; /* Indigo-ish */
+  --accent-glow: rgba(94, 106, 210, 0.4);
+
+  /* Utilities */
+  --glass-bg: rgba(18, 18, 20, 0.6);
+  --glass-border: rgba(255, 255, 255, 0.08);
 }
 
-@media (prefers-color-scheme: dark) {
-  .embedded-html-content {
-    filter: invert(1) hue-rotate(180deg);
-    background-color: var(--b1);
-  }
+body {
+  @apply bg-[#08080a] text-[#ededef] font-sans antialiased selection:bg-[#5e6ad2] selection:text-white h-full overflow-hidden;
+  font-family: "Inter", sans-serif;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+}
 
-  .embedded-html-content img {
-    filter: invert(1) hue-rotate(180deg);
-  }
+html {
+  height: 100%;
+}
+
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-subtle);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-highlight);
+}
+
+/* Linear-style utilities */
+.glass {
+  background-color: var(--glass-bg);
+  backdrop-filter: blur(12px);
+  border: 1px solid var(--glass-border);
+}
+
+.text-dynamic {
+  /* Subtle gradient for text if needed */
+  background: linear-gradient(180deg, #fff 0%, #a5a5a5 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }

@@ -1,6 +1,6 @@
 import { get } from "svelte/store";
 import { apiUrl } from "$lib/stores/apiUrl";
-import { browser } from '$app/environment'; // Import browser check
+import { browser } from "$app/environment"; // Import browser check
 
 /**
  * Checks if the given URL string points to localhost or 127.0.0.1.
@@ -8,15 +8,15 @@ import { browser } from '$app/environment'; // Import browser check
  * @returns True if the hostname is localhost or 127.0.0.1, false otherwise.
  */
 function isApiUrlLocalhost(url: string | null): boolean {
-    if (!url) return false;
-    try {
-        const parsedUrl = new URL(url);
-        // Check hostname for localhost or 127.0.0.1
-        return ["localhost", "127.0.0.1"].includes(parsedUrl.hostname);
-    } catch (e) {
-        console.error("Invalid API URL format:", url, e);
-        return false; // Treat invalid URL as not localhost for safety
-    }
+  if (!url) return false;
+  try {
+    const parsedUrl = new URL(url);
+    // Check hostname for localhost or 127.0.0.1
+    return ["localhost", "127.0.0.1"].includes(parsedUrl.hostname);
+  } catch (e) {
+    console.error("Invalid API URL format:", url, e);
+    return false; // Treat invalid URL as not localhost for safety
+  }
 }
 
 /**
@@ -30,24 +30,28 @@ function isApiUrlLocalhost(url: string | null): boolean {
  * @returns The URL string (either proxy with parameter or direct) to use for the fetch request.
  */
 export function getTargetApiUrl(endpointPath: string): string {
-    const actualBackendUrl = get(apiUrl); // Get the current configured backend URL
+  const actualBackendUrl = get(apiUrl); // Get the current configured backend URL
 
-    // Use proxy if NOT on browser OR if the API URL is not localhost
-    const useProxy = !browser || !isApiUrlLocalhost(actualBackendUrl);
+  // Use proxy if NOT on browser OR if the API URL is not localhost
+  const useProxy = !browser || !isApiUrlLocalhost(actualBackendUrl);
 
-    let targetUrl: string;
+  let targetUrl: string;
 
-    if (useProxy) {
-        // Ensure endpointPath starts with a slash, but the final path doesn't have double slashes
-        const cleanEndpointPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
-        // Append the actual backend URL as a query parameter for the server-side proxy
-        targetUrl = `/api${cleanEndpointPath}?backendUrl=${encodeURIComponent(actualBackendUrl)}`;
-    } else {
-        // Use the direct backend URL (only happens in browser when target is localhost)
-        // Ensure endpointPath starts with a slash
-        const cleanEndpointPath = endpointPath.startsWith('/') ? endpointPath : `/${endpointPath}`;
-        targetUrl = `${actualBackendUrl}${cleanEndpointPath}`;
-    }
+  if (useProxy) {
+    // Ensure endpointPath starts with a slash, but the final path doesn't have double slashes
+    const cleanEndpointPath = endpointPath.startsWith("/")
+      ? endpointPath
+      : `/${endpointPath}`;
+    // Append the actual backend URL as a query parameter for the server-side proxy
+    targetUrl = `/api${cleanEndpointPath}?backendUrl=${encodeURIComponent(actualBackendUrl)}`;
+  } else {
+    // Use the direct backend URL (only happens in browser when target is localhost)
+    // Ensure endpointPath starts with a slash
+    const cleanEndpointPath = endpointPath.startsWith("/")
+      ? endpointPath
+      : `/${endpointPath}`;
+    targetUrl = `${actualBackendUrl}${cleanEndpointPath}`;
+  }
 
-    return targetUrl;
+  return targetUrl;
 }

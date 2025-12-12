@@ -50,7 +50,7 @@
                 <!-- Add more languages here if needed -->
             </div>
         </div>
-
+        
         <!-- Backend API Address -->
         <div class="form-control mb-6">
             <label class="label" for="apiUrlInput">
