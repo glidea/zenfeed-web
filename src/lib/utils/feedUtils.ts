@@ -8,18 +8,18 @@ import type { FeedVO } from "$lib/types/feed"; // Import the type
  * @returns Unique string ID for the feed
  */
 export function getFeedItemId(feed: FeedVO): string {
-    // Use pre-calculated ID if available
-    if (feed.id) return feed.id;
+  // Use pre-calculated ID if available
+  if (feed.id) return feed.id;
 
-    // Calculate otherwise
-    const labels = feed.labels;
-    // Sort keys for consistent hash input
-    const sortedKeys = Object.keys(labels).sort();
-    const combinedString = sortedKeys
-        .map((key) => `${key}=${labels[key]}`)
-        .join("&");
-    const hashValue = simpleHash(combinedString);
-    return hashValue.toString();
+  // Calculate otherwise
+  const labels = feed.labels;
+  // Sort keys for consistent hash input
+  const sortedKeys = Object.keys(labels).sort();
+  const combinedString = sortedKeys
+    .map((key) => `${key}=${labels[key]}`)
+    .join("&");
+  const hashValue = simpleHash(combinedString);
+  return hashValue.toString();
 }
 
 /**
@@ -31,22 +31,52 @@ export function getFeedItemId(feed: FeedVO): string {
  * @returns -1 if a < b, 1 if a > b, 0 if equal (for sorting)
  */
 export function compareFeeds(a: FeedVO, b: FeedVO): number {
-    try {
-        // Compare time first (most recent first)
-        const timeA = new Date(a.time);
-        const timeB = new Date(b.time);
-        if (timeA > timeB) return -1;
-        if (timeA < timeB) return 1;
+  try {
+    // Compare time first (most recent first)
+    const timeA = new Date(a.time);
+    const timeB = new Date(b.time);
+    if (timeA > timeB) return -1;
+    if (timeA < timeB) return 1;
 
-        // If times are equal, compare by title (alphabetical)
-        const titleA = a.labels.title || "";
-        const titleB = b.labels.title || "";
-        return titleA.localeCompare(titleB);
-    } catch (e) {
-        // Fallback to title sort if date parsing fails
-        console.error("Error parsing date during sort:", e, a.time, b.time);
-        const titleA = a.labels.title || "";
-        const titleB = b.labels.title || "";
-        return titleA.localeCompare(titleB);
+    // If times are equal, compare by title (alphabetical)
+    const titleA = a.labels.title || "";
+    const titleB = b.labels.title || "";
+    return titleA.localeCompare(titleB);
+  } catch (e) {
+    // Fallback to title sort if date parsing fails
+    console.error("Error parsing date during sort:", e, a.time, b.time);
+    const titleA = a.labels.title || "";
+    const titleB = b.labels.title || "";
+    return titleA.localeCompare(titleB);
+  }
+}
+
+/**
+ * Groups feeds by a specific label key
+ * @param feeds Array of feed items
+ * @param groupByKey The label key to group by (e.g., 'source', 'tags')
+ * @param uncategorizedLabel Label for items without the grouping key
+ * @returns Object with group names as keys and arrays of feeds as values
+ */
+export function groupFeedsByLabel(
+  feeds: FeedVO[],
+  groupByKey: string,
+  uncategorizedLabel: string = "Uncategorized"
+): Record<string, FeedVO[]> {
+  const groups: Record<string, FeedVO[]> = {};
+
+  feeds.forEach((feed) => {
+    const groupValue = feed.labels[groupByKey] || uncategorizedLabel;
+    if (!groups[groupValue]) {
+      groups[groupValue] = [];
     }
-} 
+    groups[groupValue].push(feed);
+  });
+
+  // Sort feeds within each group
+  for (const groupName in groups) {
+    groups[groupName].sort(compareFeeds);
+  }
+
+  return groups;
+}

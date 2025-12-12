@@ -1,66 +1,108 @@
 @import "tailwindcss";
 
 :root {
-  /* Linear Style Dark Theme - Core Colors */
-  --bg-primary: #08080a; /* Almost black */
-  --bg-secondary: #121214; /* Dark grey for sidebars/cards */
-  --bg-tertiary: #1c1c1f; /* Lighter grey for hovers */
+  /* Matrix Green Theme - ChatGPT Inspired */
+  --bg-primary: #0d1f0d; /* Deep forest green-black */
+  --bg-secondary: #1a2f1a; /* Slightly lighter green-black */
+  --bg-tertiary: #243324; /* Card hover state - green tint */
 
-  --text-primary: #ededef; /* Main text, not quite pure white */
-  --text-secondary: #9da2ae; /* Secondary text */
-  --text-muted: #575c66; /* Muted/Disabled */
+  --text-primary: #e8f5e8; /* Very light green-white */
+  --text-secondary: #9cb99c; /* Muted green-gray */
+  --text-muted: #5a6f5a; /* Dark muted green */
 
-  --border-subtle: #222226;
-  --border-highlight: #36363a;
+  --border-subtle: #2d3f2d;
+  --border-highlight: #3d5a3d;
 
-  --accent-primary: #5e6ad2; /* Indigo-ish */
-  --accent-glow: rgba(94, 106, 210, 0.4);
+  /* Matrix Green Accents */
+  --accent-emerald: #10a37f; /* ChatGPT-like emerald green */
+  --accent-mint: #6ee7b7; /* Bright mint green */
+  --accent-lime: #84cc16; /* Vibrant lime green */
+
+  /* Primary Accent - Emerald Green */
+  --accent-primary: var(--accent-emerald);
+  --accent-glow: rgba(16, 163, 127, 0.25);
 
   /* Utilities */
-  --glass-bg: rgba(18, 18, 20, 0.6);
-  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-bg: rgba(26, 47, 26, 0.7);
+  --glass-border: rgba(110, 231, 183, 0.1);
 }
 
 body {
-  @apply bg-[#08080a] text-[#ededef] font-sans antialiased selection:bg-[#5e6ad2] selection:text-white h-full overflow-hidden;
+  @apply text-[#e8f5e8] font-sans antialiased selection:bg-[#10a37f] selection:text-white h-full overflow-hidden;
   font-family: "Inter", sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
+  /* Matrix-style ambient glow */
+  background-image:
+    radial-gradient(
+      circle at 50% 0%,
+      rgba(16, 163, 127, 0.08),
+      transparent 50%
+    ),
+    radial-gradient(
+      circle at 0% 100%,
+      rgba(110, 231, 183, 0.05),
+      transparent 40%
+    );
 }
 
 html {
   height: 100%;
 }
 
-/* Scrollbar Customization */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* Scrollbar Customization - Green theme */
+.scroller::-webkit-scrollbar {
+  width: 6px;
 }
-
-::-webkit-scrollbar-track {
+.scroller::-webkit-scrollbar-track {
   background: transparent;
 }
-
-::-webkit-scrollbar-thumb {
-  background: var(--border-subtle);
-  border-radius: 4px;
+.scroller::-webkit-scrollbar-thumb {
+  background-color: var(--border-subtle);
+  border-radius: 3px;
+}
+.scroller::-webkit-scrollbar-thumb:hover {
+  background-color: var(--accent-emerald);
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: var(--border-highlight);
-}
-
-/* Linear-style utilities */
+/* Enhanced Visual Utilities */
 .glass {
   background-color: var(--glass-bg);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   border: 1px solid var(--glass-border);
 }
 
-.text-dynamic {
-  /* Subtle gradient for text if needed */
-  background: linear-gradient(180deg, #fff 0%, #a5a5a5 100%);
+.text-gradient-green {
+  background: linear-gradient(
+    135deg,
+    var(--accent-mint),
+    var(--accent-emerald)
+  );
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+.glow-hover {
+  transition: all 0.3s ease;
+}
+.glow-hover:hover {
+  box-shadow: 0 0 20px -5px var(--accent-glow);
+  border-color: rgba(16, 163, 127, 0.4);
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
