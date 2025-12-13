@@ -185,15 +185,15 @@
                prose-h1:text-3xl prose-h1:mt-10 prose-h1:mb-6
                prose-h2:text-2xl prose-h2:mt-8 prose-h2:mb-5
                prose-h3:text-xl prose-h3:mt-6 prose-h3:mb-4
-               prose-p:text-text-primary prose-p:leading-relaxed prose-p:font-light prose-p:text-base prose-p:my-6 prose-p:opacity-90
+               prose-p:text-white prose-p:leading-relaxed prose-p:font-light prose-p:text-base prose-p:my-6
                prose-a:text-accent-mint prose-a:no-underline prose-a:font-medium prose-a:transition-colors hover:prose-a:text-accent-emerald hover:prose-a:underline
-               prose-strong:text-text-primary prose-strong:font-semibold prose-strong:bg-gradient-emerald-dark prose-strong:px-1 prose-strong:rounded
+               prose-strong:text-white prose-strong:font-semibold prose-strong:bg-gradient-emerald-dark prose-strong:px-1 prose-strong:rounded
                prose-em:text-accent-mint prose-em:not-italic prose-em:font-medium
                prose-img:rounded-xl prose-img:shadow-lg prose-img:border prose-img:border-ghost prose-img:my-8 prose-img:max-w-full
-               prose-blockquote:border-l-4 prose-blockquote:border-accent-mint prose-blockquote:bg-accent-emerald/8 prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:rounded-lg prose-blockquote:not-italic prose-blockquote:my-6 prose-blockquote:text-text-secondary
+               prose-blockquote:border-l-4 prose-blockquote:border-accent-mint prose-blockquote:bg-accent-emerald/8 prose-blockquote:py-4 prose-blockquote:px-6 prose-blockquote:rounded-lg prose-blockquote:not-italic prose-blockquote:my-6 prose-blockquote:text-white/90
                prose-code:text-accent-mint prose-code:bg-background-secondary/60 prose-code:px-2 prose-code:py-1 prose-code:rounded prose-code:before:content-none prose-code:after:content-none prose-code:text-sm prose-code:border prose-code:border-ghost/50
                prose-pre:bg-background-secondary/40 prose-pre:border prose-pre:border-ghost prose-pre:rounded-lg prose-pre:my-6 prose-pre:shadow-inner
-               prose-ul:my-6 prose-li:text-text-primary prose-li:my-2.5 prose-li:leading-relaxed
+               prose-ul:my-6 prose-li:text-white prose-li:my-2.5 prose-li:leading-relaxed
                prose-ol:my-6">
                {@html content}
             </article>
@@ -247,6 +247,25 @@
 		font-feature-settings: 'kern' 1;
 		text-rendering: optimizeLegibility;
 		-webkit-font-smoothing: antialiased;
+	}
+
+	/* Override inline styles for paragraph colors */
+	:global(.article-content p) {
+		color: #ffffff !important;
+	}
+
+	:global(.article-content li) {
+		color: #ffffff !important;
+	}
+
+	/* Override div elements in article content */
+	:global(.article-content div) {
+		color: #000000 !important;
+		background-color: rgba(26, 47, 26, 0.3) !important;
+	}
+
+	:global(.article-content div *) {
+		color: #000000 !important;
 	}
 
 	:global(.article-content code) {

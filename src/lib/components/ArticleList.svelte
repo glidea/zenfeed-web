@@ -232,9 +232,7 @@
             </h3>
 
             <!-- Summary -->
-            <p class="text-xs text-text-secondary/70 line-clamp-2 leading-relaxed 
-                      {$selectedFeedStore?.id === getFeedItemId(feed) ? 'opacity-100' : 'opacity-75 group-hover:opacity-90'} 
-                      transition-opacity">
+            <p class="text-xs text-white/90 line-clamp-2 leading-relaxed transition-opacity">
                {@html (feed.labels?.summary || 'No preview available').substring(0, 150).replace(/<[^>]*>?/gm, '') + '...'}
             </p>
           </div>
