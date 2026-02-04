@@ -1,192 +1,217 @@
 <script lang="ts">
-    import { onMount } from "svelte";
-    import { browser } from "$app/environment";
-    import Past24h from "$lib/components/Past24h.svelte";
-    import Notifications from "$lib/components/Notifications.svelte";
-    import AdvancedConfig from "$lib/components/AdvancedConfig.svelte";
-    import SettingsModal from "$lib/components/SettingsModal.svelte";
-    import { _ } from "svelte-i18n"; // Import the translation function
-    import { env } from "$env/dynamic/public"; // Import env
+  import { onMount } from 'svelte';
+  import Sidebar from '$lib/components/Sidebar.svelte';
+  import ArticleList from '$lib/components/ArticleList.svelte';
+  import ArticleReader from '$lib/components/ArticleReader.svelte';
+  import { queryFeedsStore } from '$lib/stores/feedStore';
+  import { getTargetApiUrl } from '$lib/utils/apiUtils';
+  import { _ } from 'svelte-i18n';
 
-    const disableNotifications = env.PUBLIC_DISABLE_NOTIFICATIONS === "true";
-    const disableAdvancedConfig = env.PUBLIC_DISABLE_ADVANCED_CONFIG === "true";
-    const announcementText = env.PUBLIC_ANNOUNCEMENT_TEXT || "";
-    const dismissedAnnouncementKey = "dismissedAnnouncementText";
-
-    // Define available tabs based on env vars
-    type AvailableTab = "past" | "notifications" | "advanced";
-    let availableTabs: AvailableTab[] = ["past"];
-    if (!disableNotifications) {
-        availableTabs.push("notifications");
+  let activeItem = 'inbox';
+  let selectedGroup: string | null = null;
+  let isLoading = false;
+  let error: string | null = null;
+  
+  // Resizable columns state
+  let sidebarWidth = 256; // 16rem = 256px
+  let articleListWidth = 384; // 24rem = 384px
+  let isDraggingSidebar = false;
+  let isDraggingArticleList = false;
+  
+  // Reference to ArticleList component for filter toggle
+  let articleListComponent: any;
+  
+  function handleGroupSelect(groupName: string) {
+    selectedGroup = groupName;
+    activeItem = ''; // Deselect nav items
+  }
+  
+  function handleStarredFilterToggle(enabled: boolean) {
+    if (articleListComponent && articleListComponent.toggleStarredFilter) {
+      articleListComponent.toggleStarredFilter(enabled);
     }
-    if (!disableAdvancedConfig) {
-        availableTabs.push("advanced");
+  }
+  
+  async function fetchFeeds() {
+    isLoading = true;
+    error = null;
+    try {
+        const now = new Date();
+        const past24h = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+
+        const response = await fetch(getTargetApiUrl("/query"), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                start: past24h.toISOString(),
+                end: now.toISOString(),
+                limit: 500,
+                query: "",
+                summarize: false,
+            }),
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to load feeds: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+        queryFeedsStore.set(data);
+        
+    } catch (e: any) {
+        console.error(e);
+        error = e.message;
+        queryFeedsStore.set(null);
+    } finally {
+        isLoading = false;
     }
+  }
 
-    // Set initial active tab to the first available one
-    let activeTab = $state<AvailableTab>(availableTabs[0] || "past"); // Default to 'past' if array is somehow empty
-    let showSettingsModal = $state(false);
-    let showAnnouncement = $state(false);
-
-    onMount(() => {
-        if (browser && announcementText) {
-            const dismissedText = localStorage.getItem(
-                dismissedAnnouncementKey,
-            );
-            if (announcementText !== dismissedText) {
-                showAnnouncement = true;
-            }
-        }
-    });
-
-    function dismissAnnouncement() {
-        if (browser) {
-            showAnnouncement = false;
-            localStorage.setItem(dismissedAnnouncementKey, announcementText);
-        }
+  onMount(() => {
+    fetchFeeds();
+  });
+  
+  // Resizable handlers - synchronized dragging with fixed gap
+  let dragStartX = 0;
+  let dragStartSidebarWidth = 0;
+  let dragStartArticleListWidth = 0;
+  
+  function startDraggingSidebar(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingSidebar = true;
+    dragStartX = e.clientX;
+    dragStartSidebarWidth = sidebarWidth;
+    dragStartArticleListWidth = articleListWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+  
+  function startDraggingArticleList(e: MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    isDraggingArticleList = true;
+    dragStartX = e.clientX;
+    dragStartSidebarWidth = sidebarWidth;
+    dragStartArticleListWidth = articleListWidth;
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+  }
+  
+  function handleMouseMove(e: MouseEvent) {
+    if (isDraggingSidebar) {
+      const delta = e.clientX - dragStartX;
+      // 同时调整两个宽度，保持间距不变
+      const newSidebarWidth = Math.max(200, Math.min(500, dragStartSidebarWidth + delta));
+      const actualDelta = newSidebarWidth - dragStartSidebarWidth;
+      sidebarWidth = newSidebarWidth;
+      articleListWidth = dragStartArticleListWidth + actualDelta;
+    } else if (isDraggingArticleList) {
+      const delta = e.clientX - dragStartX;
+      // 同时调整两个宽度，保持间距不变
+      const newArticleListWidth = Math.max(300, Math.min(600, dragStartArticleListWidth + delta));
+      const actualDelta = newArticleListWidth - dragStartArticleListWidth;
+      articleListWidth = newArticleListWidth;
+      sidebarWidth = dragStartSidebarWidth + actualDelta;
     }
-
-    function setActiveTab(tab: AvailableTab) {
-        // Prevent setting to a disabled tab
-        if (disableNotifications && tab === "notifications") {
-            return;
-        }
-        if (disableAdvancedConfig && tab === "advanced") {
-            return;
-        }
-        // Check if the tab is generally available (covers edge cases)
-        if (availableTabs.includes(tab)) {
-            activeTab = tab;
-        }
+  }
+  
+  function stopDragging() {
+    if (isDraggingSidebar || isDraggingArticleList) {
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
     }
+    isDraggingSidebar = false;
+    isDraggingArticleList = false;
+  }
 </script>
 
-<div class="container mx-auto p-4">
-    {#if showAnnouncement && announcementText}
-        <div role="alert" class="alert alert-info shadow-lg mb-4">
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                class="stroke-current shrink-0 w-6 h-6"
-            >
-                <path
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    stroke-width="2"
-                    d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                ></path>
-            </svg>
-            {@html announcementText}
-            <button class="btn btn-sm btn-ghost" onclick={dismissAnnouncement}>
-                {$_("announcement.known")}
-            </button>
-        </div>
-    {/if}
+<svelte:window 
+  onmousemove={handleMouseMove}
+  onmouseup={stopDragging}
+/>
 
-    <div role="tablist" class="tabs tabs-bordered mb-6 pl-8">
-        {#if availableTabs.includes("past")}
-            <a
-                role="tab"
-                class="tab pl-4 {activeTab === 'past' ? 'tab-active' : ''}"
-                onclick={() => setActiveTab("past")}
-                onkeypress={(e) => e.key === "Enter" && setActiveTab("past")}
-                tabindex={activeTab === "past" ? 0 : -1}
-            >
-                {$_("tabs.past24h")}
-            </a>
-        {/if}
-        {#if !disableNotifications && availableTabs.includes("notifications")}
-            <a
-                role="tab"
-                class="tab pl-4 {activeTab === 'notifications'
-                    ? 'tab-active'
-                    : ''}"
-                onclick={() => setActiveTab("notifications")}
-                onkeypress={(e) =>
-                    e.key === "Enter" && setActiveTab("notifications")}
-                tabindex={activeTab === "notifications" ? 0 : -1}
-            >
-                {$_("tabs.notifications")}
-            </a>
-        {/if}
-        {#if !disableAdvancedConfig && availableTabs.includes("advanced")}
-            <a
-                role="tab"
-                class="tab pl-4 {activeTab === 'advanced' ? 'tab-active' : ''}"
-                onclick={() => setActiveTab("advanced")}
-                onkeypress={(e) =>
-                    e.key === "Enter" && setActiveTab("advanced")}
-                tabindex={activeTab === "advanced" ? 0 : -1}
-            >
-                {$_("tabs.advancedConfig")}
-            </a>
-        {/if}
-        <div class="tab flex-grow justify-end">
-            <a
-                href="/wechat.png"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn btn-ghost btn-circle mr-2 tooltip tooltip-bottom"
-            >
-                <img src="/wechat.png" alt="WeChat Group" class="w-6 h-6" />
-            </a>
-            <a
-                href="https://github.com/glidea/zenfeed"
-                target="_blank"
-                rel="noopener noreferrer"
-                class="btn btn-ghost btn-circle mr-2 tooltip tooltip-bottom"
-                data-tip={$_("nav.githubStarTooltip")}
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 16 16"
-                    fill="currentColor"
-                    class="w-6 h-6"
-                >
-                    <path
-                        d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0 0 16 8c0-4.42-3.58-8-8-8Z"
-                    />
-                </svg>
-            </a>
-            <button
-                class="btn btn-ghost btn-circle"
-                onclick={() => (showSettingsModal = true)}
-            >
-                <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke-width="1.5"
-                    stroke="currentColor"
-                    class="w-6 h-6"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.325.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 0 1 1.37.49l1.296 2.247a1.125 1.125 0 0 1-.26 1.431l-1.004.827c-.292.24-.437.613-.43.992a6.759 6.759 0 0 1 0 1.855c.007.378.138.75.43.99l1.005.828c.424.35.534.955.26 1.43l-1.298 2.247a1.125 1.125 0 0 1-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.47 6.47 0 0 1-.22.128c-.333.183-.582.495-.645.869l-.213 1.28c-.09.543-.56.94-1.11.94h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 0 1-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 0 1-1.369-.49l-1.297-2.247a1.125 1.125 0 0 1 .26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.759 6.759 0 0 1 0-1.855c-.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 0 1-.26-1.43l1.297-2.247a1.125 1.125 0 0 1 1.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281Z"
-                    />
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
-                    />
-                </svg>
-            </button>
-        </div>
+{#if isLoading}
+  <!-- Loading State -->
+  <div class="flex-1 flex items-center justify-center bg-background-primary">
+    <div class="flex flex-col items-center space-y-4">
+      <div class="w-12 h-12 border-4 border-accent/30 border-t-accent rounded-full animate-spin"></div>
+      <p class="text-text-secondary text-sm">Loading articles...</p>
     </div>
-
-    <div>
-        {#if activeTab === "past"}
-            <Past24h />
-        {:else if activeTab === "notifications" && !disableNotifications}
-            <Notifications />
-        {:else if activeTab === "advanced" && !disableAdvancedConfig}
-            <AdvancedConfig />
-        {/if}
+  </div>
+{:else if error}
+  <!-- Error State -->
+  <div class="flex-1 flex items-center justify-center bg-background-primary p-8">
+    <div class="max-w-md w-full bg-background-secondary border border-red-500/30 rounded-xl p-6">
+      <div class="flex items-start space-x-3">
+        <svg class="w-6 h-6 text-red-500 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+        </svg>
+        <div class="flex-1">
+          <h3 class="text-text-primary font-semibold mb-1">Error Loading Feeds</h3>
+          <p class="text-text-muted text-sm mb-4">{error}</p>
+          <button 
+            onclick={fetchFeeds}
+            class="px-4 py-2 bg-accent hover:bg-accent/80 text-white text-sm rounded-lg transition-colors"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
     </div>
-</div>
-
-{#if showSettingsModal}
-    <SettingsModal bind:show={showSettingsModal} />
+  </div>
+{:else}
+  <!-- Main Content with Resizable Columns -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- Sidebar -->
+    <div style="width: {sidebarWidth}px; flex-shrink: 0;">
+      <Sidebar 
+        bind:activeItem 
+        bind:selectedGroup
+        onGroupSelect={handleGroupSelect}
+        onStarredFilterToggle={handleStarredFilterToggle}
+      />
+    </div>
+    
+    <!-- Sidebar Resizer -->
+    <div 
+      class="w-1 bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group flex-shrink-0"
+      onmousedown={startDraggingSidebar}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize sidebar"
+    >
+      <!-- Extended hit area for easier dragging -->
+      <div class="absolute inset-y-0 -left-2 -right-2"></div>
+      <!-- Visual indicator on hover -->
+      <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-accent-emerald opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    </div>
+    
+    <!-- Article List -->
+    <div style="width: {articleListWidth}px; flex-shrink: 0;">
+      <ArticleList 
+        bind:this={articleListComponent}
+        {selectedGroup} 
+      />
+    </div>
+    
+    <!-- Article List Resizer -->
+    <div 
+      class="w-1 bg-border-subtle hover:bg-accent-emerald/50 cursor-col-resize relative group flex-shrink-0"
+      onmousedown={startDraggingArticleList}
+      role="separator"
+      aria-orientation="vertical"
+      aria-label="Resize article list"
+    >
+      <!-- Extended hit area for easier dragging -->
+      <div class="absolute inset-y-0 -left-2 -right-2"></div>
+      <!-- Visual indicator on hover -->
+      <div class="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-accent-emerald opacity-0 group-hover:opacity-100 transition-opacity"></div>
+    </div>
+    
+    <!-- Article Reader (flexible width) -->
+    <div class="flex-1 overflow-hidden">
+      <ArticleReader />
+    </div>
+  </div>
 {/if}
